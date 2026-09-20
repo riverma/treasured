@@ -5,6 +5,8 @@
   // factual lines, italic serif for the one line that carries feeling. That split is the
   // tone, not a decoration.
 
+  import CardBack from '$lib/screens/CardBack.svelte';
+  import FlipCard from '$lib/ui/FlipCard.svelte';
   import Reach from '$lib/sheets/Reach.svelte';
   import { data } from '$lib/store/data.svelte';
   import { getSuggestion, rankForConnections } from '$lib/core/engine';
@@ -19,8 +21,15 @@
   );
 
   let sheet = $state<'message' | 'call' | null>(null);
+  let flipped = $state(false);
 
   const palette = $derived(person?.palette);
+
+  // Turning to a different person should not leave you looking at the back of their card.
+  $effect(() => {
+    void person?.id;
+    flipped = false;
+  });
 </script>
 
 <div class="screen">
@@ -32,6 +41,8 @@
     </div>
   {:else}
     <div class="scroll tight" style="--scroll-tail: 24px">
+      <FlipCard {flipped} onflip={() => (flipped = !flipped)} label={flipped ? 'Front' : 'More about them'}>
+        {#snippet front()}
       <div
         class="face"
         style="background: {gradientCss(palette!)}; color: {palette!.fontColor}"
@@ -67,6 +78,12 @@
           </button>
         </div>
       </div>
+        {/snippet}
+
+        {#snippet back()}
+          <CardBack {person} />
+        {/snippet}
+      </FlipCard>
 
       <div class="beneath">
         <span class="ah-micro-caps faint">Feeling</span>

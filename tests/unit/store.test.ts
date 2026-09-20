@@ -13,7 +13,7 @@ import { detectPattern } from '../../src/lib/core/patterns';
 import { getSuggestion } from '../../src/lib/core/engine';
 import { MAX_SENTIMENT_HISTORY } from '../../src/lib/core/types';
 import type { AppData, Person, SentimentReading } from '../../src/lib/core/types';
-import { ago, parseBirthday, sinceText } from '../../src/lib/core/time';
+import { ago, parseBirthday, shortSince, sinceText } from '../../src/lib/core/time';
 
 let db: TreasuredDB;
 let n = 0;
@@ -222,6 +222,15 @@ describe('time', () => {
     expect(parseBirthday('1990-08-14')).toBe('1990-08-14');
     expect(parseBirthday('nonsense')).toBeNull();
     expect(parseBirthday(null)).toBeNull();
+  });
+
+  it('abbreviates hard for the weather strip, where seven sit in a row', () => {
+    expect(shortSince(ago('now', now), now)).toBe('now');
+    expect(shortSince(ago('3 days', now), now)).toBe('3d');
+    expect(shortSince(ago('2w', now), now)).toBe('2w');
+    expect(shortSince(ago('4mo', now), now)).toBe('4mo');
+    expect(shortSince(ago('2y', now), now)).toBe('2y');
+    expect(shortSince('not a date', now)).toBe('');
   });
 
   it('describes a gap in the coarse terms the card uses', () => {

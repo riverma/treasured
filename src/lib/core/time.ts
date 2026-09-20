@@ -78,3 +78,19 @@ export function sinceText(iso: string | null, now: Date = new Date()): string {
   if (months < 18) return months + ' months ago';
   return Math.round(delta / MS.y) + ' years ago';
 }
+
+/**
+ * A very short age label, for the weather strip where seven of these sit in a row.
+ * "now", "3d", "2w", "4mo", "2y". Coarse on purpose: the strip is a shape to read at a
+ * glance, not a table to audit.
+ */
+export function shortSince(iso: string, now: Date = new Date()): string {
+  const then = Date.parse(iso);
+  if (Number.isNaN(then)) return '';
+  const delta = Math.max(0, now.getTime() - then);
+  if (delta < MS.d) return 'now';
+  if (delta < MS.w) return Math.round(delta / MS.d) + 'd';
+  if (delta < MS.mo) return Math.round(delta / MS.w) + 'w';
+  if (delta < MS.y) return Math.round(delta / MS.mo) + 'mo';
+  return Math.round(delta / MS.y) + 'y';
+}
