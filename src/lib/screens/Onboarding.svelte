@@ -6,6 +6,7 @@
   // is always at equal weight to the continue, because an onboarding you cannot leave is a
   // dark pattern wearing a welcome mat.
 
+  import { app } from '$lib/store/app.svelte';
   import { data } from '$lib/store/data.svelte';
   import { router } from '$lib/store/router.svelte';
   import { sentiments, sentimentKeys, tintVar } from '$lib/core/sentiments';
@@ -32,18 +33,28 @@
   async function save(): Promise<void> {
     if (!named || saving) return;
     saving = true;
-    const person = await data.addPerson({
-      fullName: fullName.trim(),
-      name: fullName.trim().split(' ')[0] ?? fullName.trim(),
-      essence: essence.trim(),
-      relations,
-      recentSentiment: feeling,
-      contact: { hasContact: phone.trim().length > 0, phone: phone.trim() || undefined }
-    });
-    await data.recordSentiment(person.id, feeling);
-    data.activePersonId = person.id;
-    await data.setPrefs({ onboarded: true });
-    router.root('/today');
+    try {
+      const person = await data.addPerson({
+        fullName: fullName.trim(),
+        name: fullName.trim().split(' ')[0] ?? fullName.trim(),
+        essence: essence.trim(),
+        relations,
+        recentSentiment: feeling,
+        contact: { hasContact: phone.trim().length > 0, phone: phone.trim() || undefined }
+      });
+      await data.recordSentiment(person.id, feeling);
+      data.activePersonId = person.id;
+      await data.setPrefs({ onboarded: true });
+      router.root('/today');
+    } catch (e) {
+      // Whatever went wrong, the one thing that must not happen is nothing: a button that
+      // goes quiet and then stays disabled leaves someone tapping at a dead screen with no
+      // idea whether they did something wrong. Say so, and let them try again.
+      console.error('could not save this person', e);
+      app.say('That did not save. Your details are still here — try once more.');
+    } finally {
+      saving = false;
+    }
   }
 
   async function leave(): Promise<void> {

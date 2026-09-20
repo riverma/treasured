@@ -5,6 +5,7 @@
 // happened to it. That is a real loss and the copy says so rather than implying otherwise —
 // "Ready for your calendar" and not "Added to your calendar".
 
+import { newId } from './id';
 import { TIME_OF_DAY_HOURS } from './types';
 import type { PlanProposal, TimeOfDay } from './types';
 
@@ -65,7 +66,7 @@ export function buildIcs(input: IcsInput): string {
     'PRODID:-//Treasured//EN',
     'CALSCALE:GREGORIAN',
     'BEGIN:VEVENT',
-    'UID:' + (input.uid ?? crypto.randomUUID()) + '@treasured',
+    'UID:' + (input.uid ?? newId()) + '@treasured',
     'DTSTAMP:' + stamp(now),
     'DTSTART:' + stamp(start),
     'DTEND:' + stamp(end),

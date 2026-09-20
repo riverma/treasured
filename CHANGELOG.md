@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-09-20
+
+### Fixed
+
+- **Adding a person did nothing, silently, on a plain http origin.** `crypto.randomUUID()`
+  is a secure-context API: on `http://` it is not merely restricted, it is absent. Creating
+  a person threw, the promise rejected into nothing, and the Keep-them button went quiet and
+  then stayed disabled — with no message, because nothing was catching the failure. This is
+  not hypothetical: a freshly deployed custom domain serves over http for however long the
+  certificate takes to be issued, and anyone opening the app in that window hit it.
+  Ids are now built from `crypto.getRandomValues()` when the convenience method is missing,
+  with a final fallback so the app cannot be stopped by a missing API.
+- **Failures are no longer silent.** Saving a person, and importing a file of them, both now
+  catch, say what happened in the app's own voice, and re-enable the button. A control that
+  goes quiet and stays dead leaves someone tapping at a screen with no idea whether they did
+  something wrong.
+
+[1.0.1]: https://github.com/riverma/treasured/releases/tag/v1.0.1
+
 ## [1.0.0] — 2026-09-19
 
 The first release. Treasured is a private, local-only companion for the people you love:
@@ -55,5 +74,5 @@ the same weight everywhere they appear.
 `connect-src 'none'` means the app cannot make a network request however the code changes,
 and `check-offline` proves it against the built output before every deploy.
 
-[Unreleased]: https://github.com/riverma/treasured/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/riverma/treasured/compare/v1.0.1...HEAD
 [1.0.0]: https://github.com/riverma/treasured/releases/tag/v1.0.0

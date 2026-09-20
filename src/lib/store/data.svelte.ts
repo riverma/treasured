@@ -10,6 +10,7 @@
 
 import type { AppData, PaletteKey, Person, Ring, SentimentKey } from '$lib/core/types';
 import { MAX_SENTIMENT_HISTORY } from '$lib/core/types';
+import { newId } from '$lib/core/id';
 import { palette, paletteForNewPerson } from '$lib/data/palettes';
 import {
   DEFAULT_PREFS, DEFAULT_RING_ID, emptyData, loadAll, requestPersistence,
@@ -123,7 +124,7 @@ class Data {
   }
 
   async addPerson(input: Pick<Person, 'fullName' | 'name' | 'essence'> & Partial<Person>): Promise<Person> {
-    const id = crypto.randomUUID();
+    const id = newId();
     const now = new Date().toISOString();
     const used = this.slice.people.map((p) => p.palette.key as PaletteKey);
     const person: Person = {

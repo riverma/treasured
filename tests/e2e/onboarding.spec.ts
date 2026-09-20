@@ -63,3 +63,24 @@ test('you can leave onboarding without adding anyone', async ({ page }) => {
   await page.waitForTimeout(1800);
   await expect(page.getByText('Nobody here yet').first()).toBeVisible();
 });
+
+test('works on plain http, where crypto.randomUUID does not exist', async ({ page }) => {
+  // A freshly deployed custom domain serves over http until the certificate is issued.
+  // crypto.randomUUID is a secure-context API, so on that origin it is simply absent —
+  // and adding a person used to throw into nothing, leaving the button dead and silent.
+  await page.addInitScript(() => { delete (Crypto.prototype as { randomUUID?: unknown }).randomUUID; });
+
+  await page.goto('/');
+  await page.waitForTimeout(1500);
+  expect(await page.evaluate(() => typeof crypto.randomUUID)).toBe('undefined');
+
+  await page.getByRole('button', { name: 'Add someone' }).click();
+  await page.getByPlaceholder('Their name').fill('Q');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Grateful', exact: true }).click();
+  await page.getByRole('button', { name: 'Keep them' }).click();
+
+  await expect.poll(() => peopleRows(page), { timeout: 10_000 }).toBe(1);
+  await expect(page.getByText('How does it feel?')).toHaveCount(0);
+});

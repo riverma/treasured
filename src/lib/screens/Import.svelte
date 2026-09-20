@@ -56,21 +56,33 @@
     picked = next;
   }
 
+  let keeping = $state(false);
+
   async function keep(): Promise<void> {
+    if (keeping) return;
+    keeping = true;
     const chosen = found.filter((c) => picked.has(c.key));
-    for (const c of chosen) {
-      await data.addPerson({
+    try {
+      for (const c of chosen) {
+        await data.addPerson({
         fullName: c.fullName,
         name: c.name,
         essence: '',
         birthday: c.birthday ?? null,
-        contact: { hasContact: !!(c.phone || c.email), phone: c.phone, email: c.email }
-      });
+          contact: { hasContact: !!(c.phone || c.email), phone: c.phone, email: c.email }
+        });
+      }
+    } catch (e) {
+      console.error('could not import everyone', e);
+      app.say('Some of those did not save. Nothing was sent anywhere — try again.');
+      keeping = false;
+      return;
     }
     // Everything parsed but not ticked goes now, rather than lingering in memory.
     found = [];
     picked = new Set();
     read = false;
+    keeping = false;
     app.say(chosen.length === 1 ? 'One person added.' : chosen.length + ' people added.');
     router.root('/deck');
   }
@@ -144,7 +156,7 @@
       {/if}
 
       <div class="go">
-        <button class="btn wide" onclick={keep} disabled={picked.size === 0}>
+        <button class="btn wide" onclick={keep} disabled={picked.size === 0 || keeping}>
           {picked.size === 0 ? 'Nobody selected' : 'Keep ' + picked.size}
         </button>
         <!-- Equal weight: changing your mind is not the lesser choice. -->
