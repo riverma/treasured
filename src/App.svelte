@@ -10,6 +10,8 @@
 
   import type { Component } from 'svelte';
   import About from '$lib/screens/About.svelte';
+  import Import from '$lib/screens/Import.svelte';
+  import Onboarding from '$lib/screens/Onboarding.svelte';
   import Panes from '$lib/screens/Panes.svelte';
   import { data } from '$lib/store/data.svelte';
   import { router } from '$lib/store/router.svelte';
@@ -22,6 +24,12 @@
   const screen = $derived(router.route.screen);
   const isDevScreen = $derived(screen === 'devdata' || screen === 'gallery');
 
+  // A device that has never held anything starts at onboarding rather than at an empty
+  // Today. There is no seed to fall back on: onboarding is how people get in.
+  const needsOnboarding = $derived(
+    data.ready && data.fresh && !data.prefs.onboarded && !isDevScreen && screen !== 'import'
+  );
+
   $effect(() => {
     if (!import.meta.env.DEV || !isDevScreen) return;
     const load = screen === 'gallery'
@@ -33,6 +41,10 @@
 
 {#if import.meta.env.DEV && isDevScreen}
   {#if Dev}<Dev />{/if}
+{:else if needsOnboarding || screen === 'onboarding'}
+  <Onboarding />
+{:else if screen === 'import'}
+  <Import />
 {:else if screen === 'about'}
   <About />
 {:else}

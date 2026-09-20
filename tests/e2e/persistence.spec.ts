@@ -55,6 +55,10 @@ test('the empty state is shown rather than invented data', async ({ page }) => {
   await page.goto('/');
   await page.waitForTimeout(1500);
 
+  // A fresh install opens on onboarding now, so step past it to reach the panes.
+  await page.getByRole('button', { name: 'Look around first' }).click();
+  await page.waitForTimeout(1200);
+
   // The empty state, not a card. Asserting on the absence of particular names would mean
   // writing those names down here, which is the thing this suite exists to prevent — so
   // the check is that nothing person-shaped rendered on any of the three panes.
@@ -73,9 +77,21 @@ test('reloading an empty install does not conjure anyone', async ({ page }) => {
   expect((await rowCounts(page)).people ?? 0).toBe(0);
 });
 
+test('a record on disk means onboarding is not shown again', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForTimeout(1200);
+  await page.getByRole('button', { name: 'Look around first' }).click();
+  await page.waitForTimeout(1000);
+  await page.reload();
+  await page.waitForTimeout(1500);
+  await expect(page.getByText('A wallet for the people you love')).toHaveCount(0);
+});
+
 test('a record already on disk is read back and rendered', async ({ page }) => {
   await page.goto('/');
   await page.waitForTimeout(1200);
+  await page.getByRole('button', { name: 'Look around first' }).click();
+  await page.waitForTimeout(900);
 
   // Written straight to IndexedDB, because in a production build there is no source module
   // to import and, until onboarding exists, no UI that creates a person. The write-path

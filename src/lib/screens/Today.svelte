@@ -7,7 +7,9 @@
 
   import CardBack from '$lib/screens/CardBack.svelte';
   import FlipCard from '$lib/ui/FlipCard.svelte';
+  import PlanSheet from '$lib/sheets/Plan.svelte';
   import Reach from '$lib/sheets/Reach.svelte';
+  import SentimentSheet from '$lib/sheets/Sentiment.svelte';
   import { data } from '$lib/store/data.svelte';
   import { getSuggestion, rankForConnections } from '$lib/core/engine';
   import { gradientCss } from '$lib/data/palettes';
@@ -26,6 +28,8 @@
   );
 
   let sheet = $state<'message' | 'call' | null>(null);
+  let planning = $state(false);
+  let feeling = $state(false);
   let flipped = $state(false);
 
   const palette = $derived(person?.palette);
@@ -77,7 +81,7 @@
             <span class="orb ah-title-l" style="color: {palette!.fontColor}">C</span>
             <span class="ah-small-caps" style="color: {palette!.softColor}">Call</span>
           </button>
-          <button class="act" disabled title="Planning arrives with the Plan sheet">
+          <button class="act" onclick={() => (planning = true)}>
             <span class="orb ah-title-l" style="color: {palette!.fontColor}">P</span>
             <span class="ah-small-caps" style="color: {palette!.softColor}">Plan</span>
           </button>
@@ -90,15 +94,17 @@
         {/snippet}
       </FlipCard>
 
-      <div class="beneath">
+      <button class="beneath" onclick={() => (feeling = true)}>
         <span class="ah-micro-caps faint">Feeling</span>
         <span class="ah-caption soft">{sentiments[person.recentSentiment].label}</span>
-      </div>
+      </button>
     </div>
   {/if}
 </div>
 
 <Reach open={sheet !== null} kind={sheet ?? 'message'} {person} onclose={() => (sheet = null)} />
+<PlanSheet open={planning} {person} onclose={() => (planning = false)} />
+<SentimentSheet open={feeling} {person} onclose={() => (feeling = false)} />
 
 <style>
   .centre { flex: 1; display: grid; place-items: center; padding: 0 var(--gutter); text-align: center; }
@@ -154,6 +160,7 @@
   .beneath {
     display: flex; align-items: baseline; justify-content: center; gap: 8px;
     padding: 18px 0 4px;
+    background: none; border: none; cursor: pointer; width: 100%;
   }
 
   @media (prefers-reduced-motion: reduce) {
