@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!--
+      Treasured makes no network requests at all, and connect-src 'none' is what makes that
+      a rule rather than a habit: the people it holds cannot be sent anywhere, however the
+      code changes. style-src allows inline because each card paints its own gradient and
+      ink colours as inline custom properties.
+
+      Two additions over Giraffy's baseline, both load-bearing here:
+        img-src blob: — the .ics hand-off builds a Blob and hands it to the Calendar app.
+        media-src 'self' data: — same file, offered as a data: URL where blob: is refused.
+      Neither opens a network path: blob: and data: are this document's own bytes.
+      Outbound sms:/tel:/https: links are navigations, which CSP does not gate.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self'; connect-src 'none'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Treasured</title>
+    <meta name="description" content="A wallet for the people you love. One card per person, evidence-based suggestions for richer relationships. Offline, on your own device, with no accounts and no servers." />
+    <meta name="theme-color" content="#ebe6df" />
+    <meta name="color-scheme" content="light" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Treasured" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/icon-180.png" />
+    <link rel="preload" href="./fonts/Fraunces-VariableFont.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="./fonts/Fraunces-Italic-VariableFont.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="./fonts/DMSans-VariableFont.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <div id="app"></div>
+    <noscript>Treasured needs JavaScript to run. It still never sends your people anywhere: everything happens on this device.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

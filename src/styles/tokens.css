@@ -1,0 +1,125 @@
+/* Treasured design tokens.
+   Transcribed from the Ahimsa design system v1.0.0 (colour, gradient, type,
+   spacing, radius, shadow, motion). Variable names match Giraffy's so the two
+   apps share one vocabulary and their ui/ components are interchangeable.
+
+   One deliberate difference from Giraffy: Giraffy overrides Ahimsa's accents
+   with its own warm set (saffron/turmeric/clay/bodhi/peacock/monsoon).
+   Treasured keeps Ahimsa's canonical accents, because the eleven person
+   gradients are built directly from them — see lib/data/palettes.ts.
+
+   tests/unit/tokens.test.ts checks every value here against the canonical
+   tokens.json, so a hand-transcription slip fails the build rather than
+   shipping a slightly-wrong cream. */
+
+:root {
+  /* ---- Neutral: warm cream to warm dark brown ---- */
+  --neutral-50:  #faf8f5;
+  --neutral-100: #f4f0ea;
+  --neutral-200: #ebe6df;
+  --neutral-300: #e0dcd5;
+  --neutral-400: #b8b0a4;
+  --neutral-500: #8a8078;
+  --neutral-600: #605850;
+  --neutral-700: #3d3428;
+  --neutral-800: #2a1f18;
+  --neutral-900: #1a1310;
+
+  /* ---- Accent palettes (300 to 700), Ahimsa canonical ---- */
+  --amber-300: #f5c391; --amber-400: #ecb078; --amber-500: #d4a574; --amber-600: #b8895a; --amber-700: #96683f;
+  --rose-300: #f4bdbf; --rose-400: #ed9fa5; --rose-500: #e08591; --rose-600: #c26875; --rose-700: #9f4e5a;
+  --terracotta-300: #d6aa95; --terracotta-400: #c89178; --terracotta-500: #b87859; --terracotta-600: #99613f; --terracotta-700: #7a4a2d;
+  --sage-300: #b9cdc0; --sage-400: #9ab5a0; --sage-500: #7a9d7f; --sage-600: #5f8467; --sage-700: #47694f;
+  --indigo-300: #b0b6df; --indigo-400: #8590cf; --indigo-500: #6571b8; --indigo-600: #4d5aa0; --indigo-700: #3a4488;
+  --violet-300: #cebede; --violet-400: #bba8d2; --violet-500: #a692c4; --violet-600: #8c78ac; --violet-700: #705d90;
+  --slate-300: #a5b3c7; --slate-400: #8499b5; --slate-500: #6781a3; --slate-600: #4c6788; --slate-700: #3a516d;
+
+  /* ---- Semantic surfaces ---- */
+  --surface-canvas:   var(--neutral-200);
+  --surface-canvas-flat: #ebe6df;
+  --surface-elevated: var(--neutral-50);
+  --surface-sunk:     var(--neutral-300);
+  --surface-inverse:  var(--neutral-800);
+
+  /* ---- Semantic text ---- */
+  --text-heading:   var(--neutral-800);
+  --text-body:      var(--neutral-700);
+  --text-secondary: #3d3428a6;
+  --text-muted:     #3d342873;
+  --text-faint:     #3d342847;
+  --text-inverse:   var(--neutral-50);
+
+  /* ---- Semantic borders ---- */
+  --border-subtle: #3d342814;
+  --border-medium: #3d34282e;
+  --border-strong: #3d342859;
+
+  /* ---- Semantic accents. Ahimsa ships no danger red, deliberately. ---- */
+  --accent-primary:   var(--amber-600);
+  --accent-secondary: var(--indigo-500);
+  --accent-success:   var(--sage-600);
+  --accent-warning:   var(--rose-600);
+
+  /* ---- Glass ---- */
+  --glass-overlay:        #ffffff6b;
+  --glass-overlay-strong: #ffffff8f;
+  --glass-scrim:          #140f0a73;
+
+  /* ---- Gradients ---- */
+  --gradient-dawn:       linear-gradient(155deg, #f4a578 0%, #f5be8e 30%, #f6d3a8 60%, #fae7c6 100%);
+  --gradient-amber:      linear-gradient(155deg, #d4a574 0%, #e0b888 30%, #ecc99c 60%, #f5dcb3 100%);
+  --gradient-rose:       linear-gradient(155deg, #e08591 0%, #ed9fa5 30%, #f4bdbf 60%, #fadcd9 100%);
+  --gradient-coral:      linear-gradient(155deg, #e88b6a 0%, #efa181 30%, #f5b89c 60%, #fad0bb 100%);
+  --gradient-terracotta: linear-gradient(155deg, #b87859 0%, #c89178 30%, #d6aa95 60%, #e3c3b3 100%);
+  --gradient-sage:       linear-gradient(155deg, #7a9d7f 0%, #9ab5a0 30%, #b9cdc0 60%, #d7e3da 100%);
+  --gradient-teal:       linear-gradient(155deg, #5db8a8 0%, #82c8bb 30%, #a8d8cd 60%, #cee8e0 100%);
+  --gradient-indigo:     linear-gradient(155deg, #6571b8 0%, #8590cf 30%, #b0b6df 60%, #d3cce6 100%);
+  --gradient-violet:     linear-gradient(155deg, #a692c4 0%, #bba8d2 30%, #cebede 60%, #e0d4ea 100%);
+  --gradient-slate:      linear-gradient(155deg, #6781a3 0%, #8499b5 30%, #a5b3c7 60%, #c5cdd8 100%);
+  --gradient-cream:      linear-gradient(170deg, #fdf6e8 0%, #f9ebcf 50%, #f3deb3 100%);
+
+  /* Person-palette extensions. Three gradients the design needs that have no Ahimsa
+     token: a softer indigo ramp than --gradient-indigo, plus a plum and an olive the
+     system never named. Kept here rather than edited into the frozen v1.0.0 token file. */
+  --gradient-indigo-soft: linear-gradient(155deg, #6571b8 0%, #8590cf 30%, #a8b1de 60%, #c8cee9 100%);
+  --gradient-mauve:       linear-gradient(155deg, #c4799a 0%, #d494b0 30%, #e5b5c6 60%, #f2d7dd 100%);
+  --gradient-olive:       linear-gradient(155deg, #7d9963 0%, #97ae82 30%, #b0c29c 60%, #c7d0b5 100%);
+
+  /* ---- Type ---- */
+  --font-display: "Fraunces", Georgia, "Iowan Old Style", serif;
+  --font-body:    "DM Sans", -apple-system, system-ui, sans-serif;
+  --font-mono:    ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --size-micro: 9px; --size-xs: 10px; --size-sm: 11px; --size-base: 13px; --size-md: 15px;
+  --size-lg: 17px; --size-xl: 22px; --size-2xl: 28px; --size-3xl: 34px; --size-4xl: 40px; --size-5xl: 48px;
+
+  /* ---- Spacing (4px grid) ---- */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px;
+  --space-7: 28px; --space-8: 32px; --space-10: 40px; --space-12: 48px; --space-16: 64px;
+
+  /* ---- Radius ---- */
+  --radius-xs: 4px; --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 20px;
+  --radius-2xl: 24px; --radius-3xl: 32px; --radius-full: 9999px;
+
+  /* ---- Shadows (warm-tinted) ---- */
+  --shadow-xs: 0 1px 2px #3d342814;
+  --shadow-sm: 0 2px 8px #3d342821;
+  --shadow-md: 0 4px 20px #3d342829, inset 0 1px 0 #ffffff99;
+  --shadow-lg: 0 8px 32px #3d342833;
+  --shadow-xl: 0 30px 60px -20px #00000059, 0 12px 24px -12px #00000033;
+  --shadow-sheet: 0 -10px 40px #0000002e;
+
+  /* ---- Motion ---- */
+  --duration-instant: 100ms; --duration-fast: 200ms; --duration-base: 300ms;
+  --duration-slow: 400ms; --duration-slower: 550ms; --duration-slowest: 800ms;
+  --ease-standard:   cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.32, 0.72, 0.32, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+
+  /* ---- Per-person ink, set on the card root by PersonGradient ----
+     Defaults are the neutral canvas values, so a component rendered outside a
+     person context still reads correctly rather than inheriting nothing. */
+  --person-font: var(--text-heading);
+  --person-soft: var(--text-secondary);
+  --person-line: var(--border-medium);
+}

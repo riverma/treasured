@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Treasured · Phase 0 spike</title>
+
+<!--
+  Phase 0. Five questions that have to be answered on real hardware before Phase 3's
+  architecture can be trusted. Deliberately dependency-free and standalone: it is not part
+  of the app build, and it must be installable on its own.
+
+  HOW TO RUN IT
+    1. Serve this directory over HTTPS. A tunnel is easiest:
+         npx vite preview --outDir spike --port 4180
+         cloudflared tunnel --url http://localhost:4180
+       Service workers, installability and storage.persist() all need a secure context,
+       and a LAN IP is not one. localhost is exempt; your phone is not on localhost.
+    2. Open the tunnel URL in Safari on the iPhone.
+    3. Share -> Add to Home Screen. Then launch it FROM THE ICON, not from Safari.
+       Standalone mode is the whole point: link handling and storage both differ there.
+    4. Work down the page. Q1 and Q2 need you to judge what happened and tap the answer.
+    5. Tap "Copy results" at the bottom and paste them back.
+
+  The CSP below is deliberately Giraffy's baseline, so that Q3 measures the real thing.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'" />
+<meta name="theme-color" content="#fdeedb" />
+<meta name="color-scheme" content="light" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Spike" />
+<link rel="manifest" href="./manifest.webmanifest" />
+
+<style>
+  :root {
+    --canvas: #fdeedb; --ink: #3d3428; --head: #2a1f18;
+    --soft: rgba(61,52,40,0.70); --line: rgba(61,52,40,0.16);
+    --card: #faf8f5; --sunk: #f9e6d0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: env(safe-area-inset-top) 20px calc(env(safe-area-inset-bottom) + 40px);
+    background: var(--canvas); color: var(--ink);
+    font: 15px/1.5 -apple-system, system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1 { font-size: 26px; font-weight: 500; margin: 22px 0 4px; color: var(--head); }
+  h2 { font-size: 17px; font-weight: 600; margin: 0 0 6px; color: var(--head); }
+  .caps { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--soft); }
+  p { margin: 0 0 10px; }
+  .muted { color: var(--soft); font-size: 13px; }
+  section { background: var(--card); border-radius: 16px; padding: 18px; margin: 14px 0; }
+  a.try, button {
+    display: inline-block; font: inherit; font-size: 14px;
+    padding: 12px 16px; margin: 4px 6px 4px 0;
+    border: none; border-radius: 999px; background: var(--sunk); color: var(--head);
+    text-decoration: none; cursor: pointer;
+  }
+  a.try:active, button:active { transform: scale(0.97); }
+  .verdict button { background: #ebe6df; }
+  .verdict button.yes.on { background: #729e53; color: #fff; }
+  .verdict button.no.on  { background: #b96144; color: #fff; }
+  .result { font-size: 13px; margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--sunk); white-space: pre-wrap; }
+  .rule { height: 1px; background: var(--line); margin: 18px 0; }
+  #out { width: 100%; min-height: 200px; font: 12px/1.45 ui-monospace, Menlo, monospace;
+         border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fff; color: var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="caps">Treasured</div>
+<h1>Phase 0 spike</h1>
+<p class="muted" id="mode">Checking launch mode…</p>
+
+<!-- ─────────────────────────── Q1 ─────────────────────────── -->
+<section>
+  <div class="caps">Question 1</div>
+  <h2>Do links launch other apps from standalone?</h2>
+  <p class="muted">
+    Tap each. The app should open, or its website should. Then come back to this page and
+    check whether it is still where you left it — that is the second half of the question.
+  </p>
+
+  <p class="muted"><strong>Replace the number first</strong> if you want a real thread:
+    it is set to <code id="num">+15550101234</code>.</p>
+
+  <div id="links"></div>
+
+  <div class="rule"></div>
+  <p class="muted">Did every one of those either open an app or land on a web page — with no
+    "Cannot Open Page"?</p>
+  <div class="verdict" data-q="q1_links">
+    <button class="yes">Yes, all fine</button>
+    <button class="no">No, something failed</button>
+  </div>
+
+  <p class="muted" style="margin-top:12px">After returning, was this page still scrolled where
+    you left it, with your answers intact?</p>
+  <div class="verdict" data-q="q1_state">
+    <button class="yes">Yes, preserved</button>
+    <button class="no">No, it reloaded</button>
+  </div>
+</section>
+
+<!-- ─────────────────────────── Q2 ─────────────────────────── -->
+<section>
+  <div class="caps">Question 2</div>
+  <h2>Which .ics delivery opens Calendar?</h2>
+  <p class="muted">
+    Three candidates, ranked. Tap them in order and stop at the first that offers to add the
+    event. Each builds the same one-hour event tomorrow at 14:00, with a one-hour alarm.
+  </p>
+
+  <div id="ics"></div>
+
+  <div class="rule"></div>
+  <p class="muted">Which one worked?</p>
+  <div class="verdict" data-q="q2_method">
+    <button data-v="data-url">1 · data: URL</button>
+    <button data-v="blob-download">2 · blob + download</button>
+    <button data-v="web-share">3 · navigator.share</button>
+    <button class="no" data-v="none">None</button>
+  </div>
+</section>
+
+<!-- ─────────────────────────── Q3 ─────────────────────────── -->
+<section>
+  <div class="caps">Question 3</div>
+  <h2>What did the CSP block?</h2>
+  <p class="muted">
+    This page runs Giraffy's baseline policy. Anything Q1 or Q2 needed that the policy
+    refuses is recorded here automatically as you go.
+  </p>
+  <div class="result" id="csp">No violations yet.</div>
+</section>
+
+<!-- ─────────────────────────── Q4 ─────────────────────────── -->
+<section>
+  <div class="caps">Question 4</div>
+  <h2>Is storage durable once installed?</h2>
+  <p class="muted">
+    Safari evicts storage for uninstalled sites after about seven days. Installed apps are
+    meant to be exempt. This asks, and then writes a row so you can check it survives.
+  </p>
+  <button id="persist">Ask for persistence</button>
+  <div class="result" id="persistOut">Not asked yet.</div>
+</section>
+
+<!-- ─────────────────────────── Q5 ─────────────────────────── -->
+<section>
+  <div class="caps">Question 5</div>
+  <h2>Does five-layer glass hold 60fps?</h2>
+  <p class="muted">
+    Today stacks five backdrop-filter layers. This animates beneath them for three seconds
+    and counts frames.
+  </p>
+  <button id="fps">Measure</button>
+  <div id="stage" style="position:relative;height:150px;margin-top:12px;border-radius:14px;overflow:hidden;background:linear-gradient(155deg,#e08591,#ed9fa5 30%,#f4bdbf 60%,#fadcd9)">
+    <div id="mover" style="position:absolute;width:90px;height:90px;border-radius:50%;background:#fff;opacity:.5;top:30px;left:0"></div>
+    <div class="g" style="position:absolute;inset:8px;border-radius:12px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:rgba(255,255,255,0.28)"></div>
+    <div class="g" style="position:absolute;inset:22px;border-radius:12px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);background:rgba(255,255,255,0.22)"></div>
+    <div class="g" style="position:absolute;inset:36px;border-radius:12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);background:rgba(255,255,255,0.18)"></div>
+    <div class="g" style="position:absolute;inset:50px;border-radius:12px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);background:rgba(255,255,255,0.16)"></div>
+    <div class="g" style="position:absolute;inset:62px;border-radius:12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);background:rgba(255,255,255,0.14)"></div>
+  </div>
+  <div class="result" id="fpsOut">Not measured yet.</div>
+</section>
+
+<!-- ─────────────────────────── results ─────────────────────────── -->
+<section>
+  <div class="caps">Results</div>
+  <h2>Copy these back</h2>
+  <textarea id="out" readonly></textarea>
+  <button id="copy">Copy results</button>
+  <span class="muted" id="copied"></span>
+</section>
+
+<script>
+(function () {
+  'use strict';
+
+  var PHONE = '+15550101234';
+  var answers = {};
+  var env = {};
+
+  // ---- environment -------------------------------------------------------
+  var standalone = window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone === true;
+  env.standalone = standalone;
+  env.ua = navigator.userAgent;
+  env.share = typeof navigator.share === 'function';
+  env.shareFiles = typeof navigator.canShare === 'function';
+  document.getElementById('mode').textContent = standalone
+    ? 'Running from the Home Screen. This is the mode that counts.'
+    : 'Running in a browser tab. Add to Home Screen and relaunch — the answers differ.';
+  document.getElementById('num').textContent = PHONE;
+
+  // ---- Q1: the roster ----------------------------------------------------
+  var digits = PHONE.replace(/\D/g, '');
+  var LINKS = [
+    { label: 'Messages (sms:)',      href: 'sms:' + PHONE,                       ext: false },
+    { label: 'Phone (tel:)',         href: 'tel:' + PHONE,                       ext: false },
+    { label: 'FaceTime',             href: 'facetime://' + PHONE,                ext: false },
+    { label: 'WhatsApp (wa.me)',     href: 'https://wa.me/' + digits,            ext: true  },
+    { label: 'Signal (signal.me)',   href: 'https://signal.me/#p/' + PHONE,      ext: true  },
+    { label: 'Telegram (t.me)',      href: 'https://t.me/+' + digits,            ext: true  },
+    { label: 'Mail (mailto:)',       href: 'mailto:someone@example.com',         ext: false }
+  ];
+  var box = document.getElementById('links');
+  LINKS.forEach(function (l) {
+    var a = document.createElement('a');
+    a.className = 'try';
+    a.href = l.href;
+    a.textContent = l.label;
+    // https links may open in a new tab; custom schemes must not, or an installed PWA
+    // can be left staring at a blank one.
+    if (l.ext) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+    box.appendChild(a);
+  });
+
+  // ---- Q2: three ways to hand over an .ics -------------------------------
+  function icsText() {
+    var d = new Date(Date.now() + 86400000);
+    d.setHours(14, 0, 0, 0);
+    var end = new Date(d.getTime() + 3600000);
+    function z(x) { return x.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+    return [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Treasured//Spike//EN',
+      'BEGIN:VEVENT',
+      'UID:spike-' + Date.now() + '@treasured',
+      'DTSTAMP:' + z(new Date()),
+      'DTSTART:' + z(d),
+      'DTEND:' + z(end),
+      'SUMMARY:Time with Sam',
+      'DESCRIPTION:From Treasured · with Sam',
+      'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY', 'DESCRIPTION:Time with Sam', 'END:VALARM',
+      'END:VEVENT', 'END:VCALENDAR'
+    ].join('\r\n');
+  }
+
+  var icsBox = document.getElementById('ics');
+
+  // 1. data: URL, no download attribute — usually triggers the import sheet directly
+  var a1 = document.createElement('a');
+  a1.className = 'try';
+  a1.textContent = '1 · data: URL';
+  a1.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(icsText());
+  icsBox.appendChild(a1);
+
+  // 2. blob + download attribute — the standard path, flaky inside standalone
+  var b2 = document.createElement('button');
+  b2.textContent = '2 · blob + download';
+  b2.onclick = function () {
+    var url = URL.createObjectURL(new Blob([icsText()], { type: 'text/calendar' }));
+    var a = document.createElement('a');
+    a.href = url; a.download = 'plan.ics';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  };
+  icsBox.appendChild(b2);
+
+  // 3. Web Share Level 2 — routes to Calendar through the share sheet
+  var b3 = document.createElement('button');
+  b3.textContent = '3 · navigator.share';
+  b3.onclick = function () {
+    try {
+      var file = new File([icsText()], 'plan.ics', { type: 'text/calendar' });
+      if (navigator.canShare && !navigator.canShare({ files: [file] })) {
+        note('q2_share', 'canShare said no for files');
+        return;
+      }
+      navigator.share({ files: [file], title: 'Time with Sam' })
+        .then(function () { note('q2_share', 'share resolved'); })
+        .catch(function (e) { note('q2_share', 'share rejected: ' + e.name); });
+    } catch (e) {
+      note('q2_share', 'threw: ' + e.name + ' ' + e.message);
+    }
+  };
+  icsBox.appendChild(b3);
+
+  function note(k, v) { answers[k] = v; render(); }
+
+  // ---- Q3: CSP violations ------------------------------------------------
+  var violations = [];
+  document.addEventListener('securitypolicyviolation', function (e) {
+    var line = e.violatedDirective + ' blocked ' + (e.blockedURI || '(inline)');
+    if (violations.indexOf(line) === -1) violations.push(line);
+    document.getElementById('csp').textContent = violations.join('\n');
+    answers.q3_csp = violations;
+    render();
+  });
+
+  // ---- Q4: persistence ---------------------------------------------------
+  document.getElementById('persist').onclick = function () {
+    var out = document.getElementById('persistOut');
+    if (!navigator.storage || !navigator.storage.persist) {
+      out.textContent = 'navigator.storage.persist is not available here.';
+      answers.q4_persist = 'unavailable';
+      return render();
+    }
+    navigator.storage.persisted().then(function (already) {
+      return already ? true : navigator.storage.persist();
+    }).then(function (granted) {
+      answers.q4_persist = granted ? 'granted' : 'refused';
+      var msg = 'persist(): ' + (granted ? 'granted' : 'refused');
+      // write a row so you can relaunch in a week and see whether it is still there
+      var open = indexedDB.open('treasured-spike', 1);
+      open.onupgradeneeded = function () { open.result.createObjectStore('t', { keyPath: 'k' }); };
+      open.onsuccess = function () {
+        var tx = open.result.transaction('t', 'readwrite');
+        tx.objectStore('t').put({ k: 'written', at: new Date().toISOString() });
+        tx.oncomplete = function () {
+          var r = open.result.transaction('t', 'readonly').objectStore('t').get('written');
+          r.onsuccess = function () {
+            answers.q4_row = r.result ? r.result.at : 'missing';
+            out.textContent = msg + '\nrow written at ' + answers.q4_row +
+              '\nRelaunch in a week and check this is still here.';
+            render();
+          };
+        };
+      };
+      if (navigator.storage.estimate) {
+        navigator.storage.estimate().then(function (e) {
+          answers.q4_quota = Math.round((e.quota || 0) / 1048576) + ' MB';
+          render();
+        });
+      }
+    });
+  };
+
+  // ---- Q5: frames under five glass layers --------------------------------
+  document.getElementById('fps').onclick = function () {
+    var out = document.getElementById('fpsOut');
+    out.textContent = 'Measuring for 3 seconds…';
+    var mover = document.getElementById('mover');
+    var frames = 0, start = performance.now(), worst = 0, prev = start;
+    (function step(now) {
+      var gap = now - prev; prev = now;
+      if (gap > worst) worst = gap;
+      frames++;
+      var t = (now - start) / 1000;
+      mover.style.transform = 'translateX(' + (Math.sin(t * 2) * 110 + 110) + 'px)';
+      if (now - start < 3000) return requestAnimationFrame(step);
+      var fps = Math.round(frames / ((now - start) / 1000));
+      answers.q5_fps = fps;
+      answers.q5_worstFrameMs = Math.round(worst);
+      out.textContent = fps + ' fps average, worst frame ' + Math.round(worst) + ' ms';
+      render();
+    })(start);
+  };
+
+  // ---- verdict buttons ---------------------------------------------------
+  Array.prototype.forEach.call(document.querySelectorAll('.verdict'), function (group) {
+    var key = group.getAttribute('data-q');
+    Array.prototype.forEach.call(group.querySelectorAll('button'), function (btn) {
+      btn.onclick = function () {
+        Array.prototype.forEach.call(group.querySelectorAll('button'), function (b) {
+          b.classList.remove('on');
+        });
+        btn.classList.add('on');
+        answers[key] = btn.getAttribute('data-v') || btn.textContent.trim();
+        render();
+      };
+    });
+  });
+
+  // ---- results -----------------------------------------------------------
+  function render() {
+    document.getElementById('out').value = JSON.stringify({
+      ranAt: new Date().toISOString(),
+      env: env,
+      answers: answers
+    }, null, 2);
+  }
+  render();
+
+  document.getElementById('copy').onclick = function () {
+    var ta = document.getElementById('out');
+    ta.select();
+    ta.setSelectionRange(0, 99999);
+    var done = function () { document.getElementById('copied').textContent = ' copied'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ta.value).then(done, function () { document.execCommand('copy'); done(); });
+    } else {
+      document.execCommand('copy'); done();
+    }
+  };
+})();
+</script>
+</body>
+</html>

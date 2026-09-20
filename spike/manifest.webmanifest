@@ -1,0 +1,10 @@
+{
+  "name": "Treasured Spike",
+  "short_name": "Spike",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdeedb",
+  "theme_color": "#fdeedb"
+}

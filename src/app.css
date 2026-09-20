@@ -1,0 +1,312 @@
+@import './styles/tokens.css';
+@import './styles/fonts.css';
+@import './styles/typography.css';
+
+/* ---- Reset and the phone frame ---- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--surface-canvas-flat); height: 100%; }
+body {
+  font-family: var(--font-body);
+  color: var(--text-body);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+a { color: var(--indigo-500); text-decoration: none; }
+a:hover { color: var(--indigo-600); }
+button { font: inherit; }
+/* Two quick taps on the same spot is a zoom gesture on iOS, and cycling how a need feels
+   is exactly two quick taps on the same small dot. Once the page is zoomed, an app pinned
+   with position: fixed cannot be scrolled at all, which reads as scrolling being broken.
+   Controls opt out of that gesture; pinch to zoom is left alone. */
+button, [role="button"] { touch-action: manipulation; }
+textarea:focus, input:focus { outline: none; }
+::-webkit-scrollbar { display: none; }
+strong { font-weight: 600; }
+
+#app {
+  position: fixed;
+  --gutter: 20px;
+  inset: 0;
+  overflow: hidden;
+  background: var(--surface-canvas);
+  color: var(--text-body);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --top-pad: calc(var(--safe-top) + 14px);
+  --tab-pad: calc(var(--safe-bottom) + 96px);
+  /* Room at the end of a list for the bottom bar. The bar measures itself and sets this
+     while it is on screen; this default is what a list gets if that never runs, and the
+     two screens that have no bar set it to zero themselves. */
+  --scroll-tail: calc(var(--safe-bottom) + 96px);
+}
+/* Mobile first, but not mobile only: the frame widens in steps so a desktop window
+   gets a comfortable app rather than a narrow strip, and lists gain a second column. */
+@media (min-width: 560px) {
+  #app { max-width: 480px; left: 50%; transform: translateX(-50%); box-shadow: var(--shadow-xl); }
+}
+@media (min-width: 900px) {
+  #app { max-width: 720px; --gutter: 32px; }
+}
+@media (min-width: 1200px) {
+  #app { max-width: 900px; --gutter: 40px; }
+}
+
+/* A screen fills the frame; the scroll region is inside it. Everything above the scroll
+   region keeps its own height, and the scroll region takes whatever is left: min-height 0
+   is what lets it be smaller than the list inside it, which is what makes it scroll. */
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; padding-top: var(--top-pad); background: var(--surface-canvas); }
+.screen > *:not(.scroll) { flex-shrink: 0; }
+.screen.over { z-index: 6; }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; padding: 6px var(--gutter) 0; display: flex; flex-direction: column; gap: 10px; }
+/* The room the bottom bar needs is a block at the end of the list, not padding under it.
+   End padding on a flex scroll container is not reliably part of what the browser will
+   scroll to, and where it is dropped the last row is left under the bar with no way to
+   bring it out. A block is content, and every engine scrolls to the end of its content.
+   Zero where there is no bar: the tab bar sets this while it is on screen. */
+.scroll::after { content: ''; display: block; flex: 0 0 auto; height: var(--scroll-tail, 0px); }
+.scroll.tight { gap: 0; }
+.col { display: flex; flex-direction: column; }
+.row { display: flex; align-items: center; }
+.grow { flex: 1; min-width: 0; }
+.wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.hidden { display: none !important; }
+
+/* ---- Buttons (Ahimsa Button: quiet, small caps, never shouty) ---- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: none; border-radius: var(--radius-full); cursor: pointer;
+  font-family: var(--font-body); font-weight: 500; text-transform: uppercase; line-height: 1.2;
+  padding: 14px 24px; font-size: 10px; letter-spacing: 0.22em;
+  background: var(--text-heading); color: var(--text-inverse); box-shadow: var(--shadow-sm);
+  transition: opacity var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+  user-select: none; -webkit-user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn.sm { padding: 8px 16px; font-size: 9px; }
+.btn.ghost { background: transparent; color: var(--text-secondary); box-shadow: none; }
+.btn.glass { background: var(--glass-overlay); color: var(--text-heading); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: none; }
+.btn.danger { background: var(--terracotta-500); color: var(--text-inverse); box-shadow: none; }
+.btn.wide { width: 100%; }
+.btn:disabled, .btn.disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---- Pills ---- */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: none;
+  border-radius: var(--radius-full); font-family: var(--font-body); font-size: 10px; font-weight: 500;
+  letter-spacing: 0.15em; text-transform: uppercase; line-height: 1.2; cursor: pointer; user-select: none; -webkit-user-select: none;
+  background: var(--surface-elevated); color: var(--text-body); box-shadow: var(--shadow-xs); white-space: nowrap;
+  transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+.pill.active { background: var(--text-heading); color: var(--text-inverse); }
+.pill.outline { background: transparent; color: var(--text-secondary); box-shadow: inset 0 0 0 1px var(--border-medium); }
+.pill.outline.active { background: var(--text-heading); color: var(--text-inverse); box-shadow: none; }
+.pill.glass { background: var(--glass-overlay); color: var(--text-heading); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: none; }
+.pill.glass.active { background: var(--text-heading); color: var(--text-inverse); }
+.pill.static { cursor: default; }
+.pill .dot { width: 6px; height: 6px; border-radius: var(--radius-full); flex-shrink: 0; }
+
+/* ---- Toggle chips (italic serif, fill dark when selected) ---- */
+.chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border: none; border-radius: var(--radius-full);
+  font-family: var(--font-display); font-style: italic; font-size: 15px; font-weight: 400; line-height: 1.2; cursor: pointer;
+  user-select: none; -webkit-user-select: none; background: var(--glass-overlay); color: var(--text-heading);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: inset 0 0 0 1px var(--border-subtle);
+  transition: background var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard);
+}
+.chip.selected { background: var(--text-heading); color: var(--text-inverse); box-shadow: none; }
+.chip .dot { width: 7px; height: 7px; border-radius: var(--radius-full); flex-shrink: 0; }
+
+/* ---- Cards (surfaces) ---- */
+.card { position: relative; border-radius: var(--radius-xl); padding: 24px; overflow: hidden; background: var(--surface-elevated); color: var(--text-body); box-shadow: var(--shadow-md); flex-shrink: 0; }
+.card.list { box-shadow: var(--shadow-sm); }
+.card.sunk { background: var(--surface-sunk); box-shadow: none; }
+.card.glass { background: var(--glass-overlay); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: none; }
+.card.tap { cursor: pointer; }
+.card.tap:active { transform: scale(0.99); }
+.card.p0 { padding: 0; }
+
+/* ---- Inputs: a bottom rule, no box ---- */
+.field { display: block; width: 100%; }
+.field .lbl { display: block; font-family: var(--font-body); font-size: 10px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+.field input, .field textarea {
+  width: 100%; background: transparent; border: none; outline: none; padding: 8px 0; resize: none; line-height: 1.4;
+  border-bottom: 1px solid var(--border-medium); transition: border-color var(--duration-base) var(--ease-standard);
+  font-family: var(--font-body); font-size: 13px; font-weight: 400; color: var(--text-body); border-radius: 0;
+}
+.field input:focus, .field textarea:focus { border-bottom-color: var(--border-strong); }
+.field.essence input, .field.essence textarea { font-family: var(--font-display); font-style: italic; font-size: 17px; color: var(--text-heading); }
+.field input::placeholder, .field textarea::placeholder { color: var(--text-faint); font-style: italic; font-family: var(--font-display); }
+
+/* ---- Small caps, pull quotes, monograms, dots ---- */
+.caps { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-body); font-size: 10px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; line-height: 1.2; color: var(--text-muted); }
+.caps.rule::before { content: ''; width: 24px; height: 1px; background: currentColor; opacity: 0.6; flex-shrink: 0; }
+.quote { margin: 0; font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 17px; line-height: 1.35; color: var(--text-heading); text-wrap: pretty; text-align: center; }
+.quote.md { font-size: 15px; }
+.quote.xl { font-size: 22px; }
+.quote.bordered { text-align: left; border-left: 1px solid var(--border-medium); padding-left: 16px; }
+.mono { display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-full); font-family: var(--font-display); font-style: italic; font-weight: 300; line-height: 1; flex-shrink: 0; background: var(--surface-elevated); color: var(--text-heading); box-shadow: var(--shadow-sm); }
+.mono.sunk { background: var(--surface-sunk); color: var(--text-secondary); box-shadow: none; }
+.mono.glass { background: var(--glass-overlay); backdrop-filter: blur(12px); box-shadow: inset 0 0 0 1px var(--glass-overlay-strong); }
+.dots { display: inline-flex; align-items: center; gap: 6px; }
+.dots span { width: 5px; height: 5px; border-radius: var(--radius-full); background: var(--border-strong); opacity: 0.5; transition: width var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard); }
+.dots span.on { width: 22px; opacity: 1; background: var(--text-heading); }
+.dots.tap span { cursor: pointer; }
+.sdot { width: 7px; height: 7px; border-radius: 99px; flex-shrink: 0; display: inline-block; }
+
+/* ---- Section rule: "── label ──────" ---- */
+.rule-row { display: flex; align-items: center; gap: 10px; }
+.rule-row::before { content: ''; width: 16px; border-top: 1px solid var(--border-medium); flex-shrink: 0; }
+.rule-row::after { content: ''; flex: 1; border-top: 1px solid var(--border-medium); }
+
+/* ---- Header rows ---- */
+.hdr { padding: 6px var(--gutter) 8px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.back { cursor: pointer; font-family: var(--font-body); font-size: 19px; color: var(--text-secondary); padding: 4px 8px 4px 0; background: none; border: none; line-height: 1; }
+.iconbtn { cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 2px 3px; background: none; border: none; color: var(--text-secondary); }
+.iconbtn span { font-family: var(--font-body); font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; }
+.iconbtn.off { color: var(--border-strong); cursor: default; }
+.iconbtn.count { color: var(--text-muted); padding: 2px 5px; border-radius: 12px; background: var(--surface-sunk); }
+
+/* ---- Sheets ---- */
+.scrim { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; background: var(--glass-scrim); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); z-index: 50; }
+.sheet { width: 100%; max-height: 88%; overflow-y: auto; scrollbar-width: none; background: var(--surface-elevated); border-top-left-radius: var(--radius-3xl); border-top-right-radius: var(--radius-3xl); box-shadow: var(--shadow-sheet); padding: 12px 24px calc(28px + var(--safe-bottom)); animation: sheet-up var(--duration-slower) var(--ease-decelerate); }
+.sheet .grab { width: 40px; height: 4px; border-radius: var(--radius-full); background: var(--border-strong); margin: 0 auto 20px; }
+.sheet .title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+.sheet .title-row .t { font-family: var(--font-display); font-size: 22px; color: var(--text-heading); line-height: 1.15; }
+.sheet .x { border: none; background: var(--surface-sunk); color: var(--text-secondary); width: 32px; height: 32px; border-radius: var(--radius-full); cursor: pointer; font-size: 16px; line-height: 1; flex-shrink: 0; }
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* ---- Toast ---- */
+.toast { position: absolute; left: 0; right: 0; bottom: calc(var(--tab-pad) + 26px); z-index: 60; display: flex; justify-content: center; pointer-events: none; padding: 0 20px; }
+.toast > div { background: var(--glass-overlay-strong); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 999px; padding: 10px 18px; box-shadow: var(--shadow-md); max-width: 320px; }
+
+/* A list of self-contained rows: one column on a phone, two when the window allows it. */
+.list-grid { display: flex; flex-direction: column; gap: 10px; }
+@media (min-width: 900px) {
+  .list-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+}
+
+/* ---- Horizontal chip rows ---- */
+.hrow { display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-right: 12px; mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent); }
+.hrow > * { flex-shrink: 0; }
+@media (min-width: 900px) {
+  .hrow { flex-wrap: wrap; overflow-x: visible; mask-image: none; -webkit-mask-image: none; row-gap: 7px; }
+}
+
+/* Text colour helpers */
+.c-head { color: var(--text-heading); }
+.c-body { color: var(--text-body); }
+.c-sec { color: var(--text-secondary); }
+.c-muted { color: var(--text-muted); }
+.c-faint { color: var(--text-faint); }
+.plain { background: none; border: none; padding: 0; cursor: pointer; text-align: left; color: inherit; }
+.linkish { cursor: pointer; color: var(--indigo-600); }
+.hairline { border-top: 1px solid var(--border-subtle); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: none; }
+  .btn, .pill, .chip, .card { transition: none; }
+}
+
+/* ======================================================================
+   Treasured-specific surfaces. Everything above is the shared Ahimsa
+   component layer, kept byte-close to Giraffy so the two can converge on
+   a common package later.
+   ====================================================================== */
+
+/* ---- Person context ----
+   A card sets --person-* on itself; every descendant reads those rather
+   than taking a colour prop, which is what lets the primitives stay
+   person-agnostic. */
+.person { position: relative; background: var(--person-bg, var(--gradient-rose)); color: var(--person-font); }
+.person .c-on   { color: var(--person-font); }
+.person .c-soft { color: var(--person-soft); }
+.person .hairline-on { border-top: 1px solid var(--person-line); }
+.person .caps { color: var(--person-soft); }
+.person .quote { color: var(--person-font); }
+
+/* The full-bleed hero crossfades between people: two stacked layers, opacity
+   only. No positional movement, no haptic (07_INTERACTIONS). */
+.person-bg { position: absolute; inset: 0; z-index: 0; transition: opacity var(--duration-slower) var(--ease-standard); }
+.person > .content { position: relative; z-index: 1; }
+
+/* ---- Monogram sizes the spec calls for ---- */
+.mono.s20  { width: 20px;  height: 20px;  font-size: 11px; }
+.mono.s44  { width: 44px;  height: 44px;  font-size: 22px; }
+.mono.s84  { width: 84px;  height: 84px;  font-size: 52px; }
+.mono.s110 { width: 110px; height: 110px; font-size: 64px; }
+.mono.s130 { width: 130px; height: 130px; font-size: 78px; }
+.mono.s144 { width: 144px; height: 144px; font-size: 88px; }
+
+/* ---- Action row: three frosted circles ---- */
+.actions { display: flex; gap: 20px; justify-content: center; }
+.actions button { display: flex; flex-direction: column; align-items: center; gap: 10px; background: none; border: none; cursor: pointer; }
+.actions .orb {
+  width: 64px; height: 64px; border-radius: var(--radius-full);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--glass-overlay); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 22px #00000017, inset 0 1px 0 #ffffff99;
+  transition: transform var(--duration-base) var(--ease-standard);
+}
+.actions button:active .orb { transform: scale(0.95); }
+
+/* ---- Weather strip ---- */
+.weather { display: flex; align-items: flex-end; justify-content: space-between; gap: 4px; }
+.weather .w { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+.weather .chip {
+  width: 28px; height: 28px; border-radius: var(--radius-full); padding: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+  background: #ffffff47; box-shadow: none; font-family: inherit; font-style: normal;
+}
+.weather .w.now .chip {
+  width: 34px; height: 34px; font-size: 17px; background: #ffffff99;
+  box-shadow: 0 4px 12px #0000000f, inset 0 1px 0 #ffffff66;
+}
+
+/* ---- Card flip ---- */
+.flip { position: relative; width: 100%; height: 100%; transform-style: preserve-3d;
+        transition: transform var(--duration-slow) var(--ease-emphasized); }
+.flip.back { transform: rotateY(-180deg); }
+.flip > .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
+.flip > .face.rear { transform: rotateY(180deg); }
+
+/* ---- Deck: CSS 3D cover flow, transforms straight from the mockup ---- */
+.deck { position: relative; flex: 1; overflow: hidden; perspective: 1400px; }
+.deck .dcard {
+  position: absolute; top: 50%; left: 50%; width: 220px; height: 340px;
+  border-radius: 28px; cursor: pointer;
+  transition: transform var(--duration-slower) var(--ease-emphasized), opacity 450ms ease;
+}
+.deck .dcard.at0  { transform: translate(-50%,-50%) translateZ(0) scale(1) rotateY(0deg); opacity: 1; z-index: 5;
+                    box-shadow: var(--shadow-xl); }
+.deck .dcard.atm1 { transform: translate(-50%,-50%) translateX(-58%) translateZ(-100px) scale(.86) rotateY(28deg); opacity: .7; z-index: 4; }
+.deck .dcard.atp1 { transform: translate(-50%,-50%) translateX(58%)  translateZ(-100px) scale(.86) rotateY(-28deg); opacity: .7; z-index: 4; }
+.deck .dcard.atm2 { transform: translate(-50%,-50%) translateX(-95%) translateZ(-220px) scale(.72) rotateY(38deg); opacity: .35; z-index: 3; }
+.deck .dcard.atp2 { transform: translate(-50%,-50%) translateX(95%)  translateZ(-220px) scale(.72) rotateY(-38deg); opacity: .35; z-index: 3; }
+.deck .dcard.far  { transform: translate(-50%,-50%) translateX(160%) scale(.5); opacity: 0; z-index: 1; pointer-events: none; }
+.deck .dcard.farm { transform: translate(-50%,-50%) translateX(-160%) scale(.5); opacity: 0; z-index: 1; pointer-events: none; }
+.deck .dcard:not(.at0) { box-shadow: 0 18px 40px -16px #00000040; }
+
+/* Reduce Motion: keep every screen reachable, drop the 3D. Same durations —
+   reduced motion must not be slower or less legible (07_INTERACTIONS). */
+@media (prefers-reduced-motion: reduce) {
+  .flip { transition: none; }
+  .flip.back { transform: none; }
+  .flip > .face { backface-visibility: visible; -webkit-backface-visibility: visible;
+                  transition: opacity var(--duration-slow) var(--ease-emphasized); }
+  .flip > .face.rear { transform: none; }
+  .deck .dcard { transition: opacity var(--duration-slower) var(--ease-emphasized); }
+  .deck .dcard.atm1, .deck .dcard.atp1, .deck .dcard.atm2, .deck .dcard.atp2 { transform: translate(-50%,-50%) scale(.92); }
+  .person-bg { transition: opacity var(--duration-slower) var(--ease-standard); }
+}
+
+/* Reduce Transparency: an accessibility requirement, and a free win on the
+   five simultaneous blur layers the Today screen would otherwise carry. */
+@media (prefers-reduced-transparency: reduce) {
+  .actions .orb, .btn.glass, .pill.glass, .chip, .card.glass, .mono.glass, .toast > div {
+    backdrop-filter: none; -webkit-backdrop-filter: none; background: #fffffff0;
+  }
+}

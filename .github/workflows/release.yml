@@ -1,0 +1,36 @@
+# Cuts a GitHub release when a version tag is pushed. Deploys are done by hand
+# with scripts/deploy.sh, so this workflow only publishes notes and the built site.
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run check-licenses
+      - run: npm run build
+      - run: npm run check-offline
+      - name: Bundle the built site
+        run: |
+          echo treasured.riverma.com > dist/CNAME
+          tar -czf "treasured-${GITHUB_REF_NAME}.tar.gz" -C dist .
+      # pinned to a commit: a moving tag on a third-party action runs with contents: write
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          generate_release_notes: true
+          body_path: CHANGELOG.md
+          files: treasured-*.tar.gz
