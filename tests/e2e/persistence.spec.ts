@@ -57,9 +57,11 @@ test('the empty state is shown rather than invented data', async ({ page }) => {
 
   // The empty state, not a card. Asserting on the absence of particular names would mean
   // writing those names down here, which is the thing this suite exists to prevent — so
-  // the check is that nothing person-shaped rendered at all.
-  await expect(page.locator('.centre')).toBeVisible();
-  expect(await page.locator('.face').count()).toBe(0);
+  // the check is that nothing person-shaped rendered on any of the three panes.
+  await expect(page.locator('.centre').first()).toBeVisible();
+  expect(await page.locator('.face').count()).toBe(0);      // no Today card
+  expect(await page.locator('.slot').count()).toBe(0);      // no deck cards
+  expect(await page.locator('.person').count()).toBe(0);    // no weekly three
   expect(await page.locator('h1').count()).toBe(0);
 });
 

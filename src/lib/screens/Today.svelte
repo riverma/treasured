@@ -14,10 +14,15 @@
   import { sinceText } from '$lib/core/time';
   import { sentiments } from '$lib/core/sentiments';
 
-  // Until the deck lands in Phase 5, Today shows whoever most needs attention.
+  // Whoever you picked from the deck, if they are still in the ring you are browsing.
+  // Otherwise whoever most needs attention — which is what Today is for when you have not
+  // asked for anyone in particular.
+  const inRing = $derived(data.peopleInRing(data.slice.activeRingId));
+  const chosen = $derived(inRing.find((p) => p.id === data.activePersonId));
   const person = $derived(
-    rankForConnections(data.slice.people.filter((p) => !data.isSuppressed(p.id)), 1)[0]
-      ?? data.slice.people[0]
+    chosen
+      ?? rankForConnections(inRing.filter((p) => !data.isSuppressed(p.id)), 1)[0]
+      ?? inRing[0]
   );
 
   let sheet = $state<'message' | 'call' | null>(null);

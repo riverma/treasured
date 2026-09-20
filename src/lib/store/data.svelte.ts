@@ -23,6 +23,12 @@ class Data {
   ready = $state(false);
   /** True when this device has never held any data. Drives onboarding. */
   fresh = $state(false);
+  /**
+   * Whoever you last chose from the deck. Not persisted: which card you were looking at is
+   * a property of this glance at the app, not of the people you know. When it is unset,
+   * or when they are not in the ring you are browsing, Today falls back to the ranking.
+   */
+  activePersonId = $state<string | null>(null);
 
   /**
    * Boot.
