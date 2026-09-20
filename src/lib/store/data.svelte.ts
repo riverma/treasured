@@ -168,6 +168,12 @@ class Data {
     }
   }
 
+  async setCountryCode(raw: string): Promise<void> {
+    const digits = raw.replace(/\D/g, '').slice(0, 4);
+    this.slice.countryCode = digits || '1';
+    await this.commit();
+  }
+
   async setActiveRing(ringId: string): Promise<void> {
     if (!this.slice.rings.some((r) => r.id === ringId)) return;
     this.slice.activeRingId = ringId;

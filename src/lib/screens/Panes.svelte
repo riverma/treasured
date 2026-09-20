@@ -64,12 +64,23 @@
 </div>
 
 <div class="rail">
+  <button class="cog ah-micro-caps" onclick={() => router.go('/settings')}>Settings</button>
   <Dots count={PANES.length} {index} labels={PANES} />
+  <span class="spacer"></span>
 </div>
 
 <style>
   /* The dots sit in their own strip at the bottom; the panes take everything above it. */
-  .rail { position: absolute; left: 0; right: 0; bottom: 0; }
+  .rail {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding-left: var(--gutter); padding-right: var(--gutter);
+  }
+  .cog, .spacer { flex: 1 1 0; min-width: 0; }
+  .cog {
+    background: none; border: none; cursor: pointer; text-align: left;
+    color: var(--text-faint); padding: 6px 0 calc(var(--safe-bottom) + 10px);
+  }
 
   .panes {
     position: absolute;

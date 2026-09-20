@@ -11,8 +11,12 @@
   import type { Component } from 'svelte';
   import About from '$lib/screens/About.svelte';
   import Import from '$lib/screens/Import.svelte';
+  import Install from '$lib/screens/Install.svelte';
   import Onboarding from '$lib/screens/Onboarding.svelte';
   import Panes from '$lib/screens/Panes.svelte';
+  import Settings from '$lib/screens/Settings.svelte';
+  import Toast from '$lib/ui/Toast.svelte';
+  import UpdateBar from '$lib/ui/UpdateBar.svelte';
   import { data } from '$lib/store/data.svelte';
   import { router } from '$lib/store/router.svelte';
 
@@ -20,6 +24,15 @@
 
   router.start();
   void data.load();
+
+  // The hub links to <app>.riverma.com/#install. router.start() records that and sends the
+  // app to Today; this takes it the rest of the way to the guide.
+  $effect(() => {
+    if (router.installRequested && data.ready) {
+      router.installRequested = false;
+      router.go('/install');
+    }
+  });
 
   const screen = $derived(router.route.screen);
   const isDevScreen = $derived(screen === 'devdata' || screen === 'gallery');
@@ -45,8 +58,15 @@
   <Onboarding />
 {:else if screen === 'import'}
   <Import />
+{:else if screen === 'install'}
+  <Install />
+{:else if screen === 'settings'}
+  <Settings />
 {:else if screen === 'about'}
   <About />
 {:else}
   <Panes />
 {/if}
+
+<UpdateBar />
+<Toast />
