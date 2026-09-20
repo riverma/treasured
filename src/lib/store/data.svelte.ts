@@ -171,6 +171,12 @@ class Data {
   async setActiveRing(ringId: string): Promise<void> {
     if (!this.slice.rings.some((r) => r.id === ringId)) return;
     this.slice.activeRingId = ringId;
+    // The person you were looking at may not be in the ring you just chose. Leaving them
+    // on Today would show someone the ring says you are not currently browsing, so the
+    // choice is released and Today falls back to ranking within the new ring.
+    if (this.activePersonId && !this.peopleInRing(ringId).some((p) => p.id === this.activePersonId)) {
+      this.activePersonId = null;
+    }
     await this.commit();
   }
 

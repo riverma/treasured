@@ -6,6 +6,7 @@
   // interaction pattern this whole app exists to not be.
 
   import DeckCard from '$lib/ui/DeckCard.svelte';
+  import RingsSheet from '$lib/sheets/Rings.svelte';
   import { data } from '$lib/store/data.svelte';
   import { router } from '$lib/store/router.svelte';
   import { app } from '$lib/store/app.svelte';
@@ -13,6 +14,7 @@
   const people = $derived(data.peopleInRing(data.slice.activeRingId));
 
   let index = $state(0);
+  let rings = $state(false);
 
   // Deleting someone, or switching to a smaller ring, must not leave the deck pointing past
   // the end of it.
@@ -51,9 +53,13 @@
 <div class="screen">
   <div class="hdr">
     <div class="grow">
-      <span class="ah-micro-caps faint">{data.activeRing?.name ?? 'Everyone'}</span>
+      <span class="ah-micro-caps faint">Deck</span>
       <h2 class="ah-heading-m head">Your people</h2>
     </div>
+    <button class="pill" onclick={() => (rings = true)}>
+      <span class="dot" style="background: {data.activeRing?.color ?? 'var(--amber-600)'}"></span>
+      {data.activeRing?.name ?? 'Everyone'}
+    </button>
   </div>
 
   {#if !data.ready}
@@ -97,6 +103,8 @@
     {/if}
   {/if}
 </div>
+
+<RingsSheet open={rings} onclose={() => (rings = false)} />
 
 <style>
   .head { margin: 2px 0 0; color: var(--text-heading); }

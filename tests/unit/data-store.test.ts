@@ -90,6 +90,26 @@ describe('reads', () => {
   });
 });
 
+describe('rings', () => {
+  it('releases the chosen person when they are not in the newly chosen ring', async () => {
+    data.activePersonId = SAMPLE_IDS[0]!;          // A, who is in no ring but the default
+    await data.setActiveRing('ring-2');             // holds B, C, D
+    expect(data.activePersonId).toBeNull();
+  });
+
+  it('keeps the chosen person when they are in the new ring', async () => {
+    data.activePersonId = SAMPLE_IDS[1]!;          // B, a member of ring-2
+    await data.setActiveRing('ring-2');
+    expect(data.activePersonId).toBe(SAMPLE_IDS[1]!);
+  });
+
+  it('ignores a ring that does not exist', async () => {
+    const before = data.slice.activeRingId;
+    await data.setActiveRing('no-such-ring');
+    expect(data.slice.activeRingId).toBe(before);
+  });
+});
+
 describe('later', () => {
   it('suppresses for a week and says so', async () => {
     expect(data.isSuppressed(SAMPLE_IDS[4]!)).toBe(false);
