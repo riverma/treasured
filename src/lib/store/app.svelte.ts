@@ -9,6 +9,12 @@ class App {
   /** Set aside for now. Kept here rather than inside UpdateBar so the shell can tell whether
    *  to leave room at the top for it — otherwise the bar sits on top of every Back button. */
   updateDismissed = $state(false);
+  /**
+   * The waiting worker refused to hand over. There is nothing more the page can do about it,
+   * so the notice stops asking and Settings explains what will finish the job. Without this
+   * the app prompts, fails, reloads, and prompts again indefinitely.
+   */
+  updateStuck = $state(false);
 
   /** Transient, non-modal message. Never red: Ahimsa refuses error banners. */
   toast = $state<string | null>(null);
@@ -40,10 +46,10 @@ class App {
     if (this.updating) return;
     this.updating = true;
 
-    let reloaded = false;
+    let settled = false;
     const reload = (): void => {
-      if (reloaded) return;
-      reloaded = true;
+      if (settled) return;
+      settled = true;
       location.reload();
     };
 
@@ -52,8 +58,22 @@ class App {
 
     navigator.serviceWorker.addEventListener('controllerchange', reload, { once: true });
     reg.waiting.postMessage('skip-waiting');
-    // a worker that never takes over must not strand the page on the old version
-    setTimeout(reload, 3000);
+
+    // The old version of this reloaded unconditionally after three seconds, and that is what
+    // produced an endless "a newer Treasured is ready". A worker that will not hand over
+    // stays waiting across a reload, so the reload accomplished nothing except to show the
+    // notice again — forever, every time. Some engines hold the old worker until every
+    // window of the app is closed, and no amount of reloading changes that.
+    //
+    // So when the handover does not happen, say so instead of pretending.
+    setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      this.updating = false;
+      this.updateStuck = true;
+      this.updateDismissed = true;
+      this.say('The update is ready but needs Treasured fully closed to finish.');
+    }, 3000);
   }
 
   /**
@@ -73,6 +93,7 @@ class App {
       return 'unsupported';
     }
     if (reg.waiting) this.updateReady = true;
+    else { this.updateStuck = false; this.updateReady = false; }
     return this.updateReady || reg.waiting ? 'ready' : 'current';
   }
 

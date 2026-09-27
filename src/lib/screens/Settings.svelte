@@ -97,7 +97,14 @@
       <button class="btn ghost wide" onclick={check} disabled={checkState === 'checking'}>
         {checkState === 'checking' ? 'Looking…' : 'Check for a new version'}
       </button>
-      {#if checkState === 'ready' || app.updateReady}
+      {#if app.updateStuck}
+        <!-- Handover was refused. Saying this once beats asking forever. -->
+        <p class="ah-body note">
+          A newer Treasured is downloaded and ready, but it cannot take over while this one is
+          still running. Close Treasured completely — swipe it away, or quit the app — and it
+          will be there next time you open it.
+        </p>
+      {:else if checkState === 'ready' || app.updateReady}
         <button class="btn wide" onclick={() => app.applyUpdate()} disabled={app.updating}>
           {app.updating ? 'Updating…' : 'Update now'}
         </button>

@@ -5,7 +5,14 @@ export function registerServiceWorker(): void {
   if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
   window.addEventListener('load', async () => {
     try {
-      const reg = await navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js');
+      // updateViaCache: 'none' — GitHub Pages serves sw.js with max-age=600, and a service
+      // worker script answered from the HTTP cache is how an app ends up comparing an old
+      // script against a newer installed one and deciding, wrongly and repeatedly, that an
+      // update is available. The script itself must always come from the network.
+      const reg = await navigator.serviceWorker.register(
+        import.meta.env.BASE_URL + 'sw.js',
+        { updateViaCache: 'none' }
+      );
       const watch = (w: ServiceWorker | null) => {
         if (!w) return;
         w.addEventListener('statechange', () => {

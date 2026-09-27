@@ -56,6 +56,49 @@ test('a deck card opens when clicked with a mouse', async ({ page }) => {
   expect(await page.evaluate(() => location.hash)).toContain('today');
 });
 
+test('a deck card still opens when the click drifts, as a trackpad click does', async ({ page }) => {
+  // Regression, second attempt. The first fix captured the pointer after 10px, which is less
+  // than a trackpad click drifts — so a click with a little jitter opened nothing, and being
+  // under the 40px commit it did not advance the deck either. The interaction did nothing at
+  // all. Capture now waits for the gesture to commit.
+  await seed(page);
+  await page.locator('[role="tab"]').filter({ hasText: 'Deck' }).click();
+  await page.waitForTimeout(900);
+
+  const box = (await page.locator('.slot.active').boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 25, cy, { steps: 5 });   // drift, not a drag
+  await page.mouse.up();
+  await page.waitForTimeout(1100);
+
+  expect(await page.evaluate(() => location.hash)).toContain('today');
+});
+
+test('a real drag moves the deck instead of opening a card', async ({ page }) => {
+  await seed(page);
+  await page.locator('[role="tab"]').filter({ hasText: 'Deck' }).click();
+  await page.waitForTimeout(900);
+
+  const before = (await page.locator('.count').textContent())!.trim();
+  const box = (await page.locator('.slot.active').boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx - 120, cy, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(1100);
+
+  // stayed on the deck, and moved exactly one card
+  expect(await page.evaluate(() => location.hash)).toContain('deck');
+  expect((await page.locator('.count').textContent())!.trim()).not.toBe(before);
+});
+
 test('a horizontal wheel leaves Today, rather than being swallowed', async ({ page }) => {
   // Regression: overscroll-behavior: contain on both axes meant a region that cannot scroll
   // sideways still blocked the wheel from chaining out to the pane surface.

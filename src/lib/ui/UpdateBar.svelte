@@ -12,7 +12,7 @@
   import { app } from '$lib/store/app.svelte';
 </script>
 
-{#if app.updateReady && !app.updateDismissed}
+{#if app.updateReady && !app.updateDismissed && !app.updateStuck}
   <div class="bar" role="status">
     <span class="ah-caption grow">A newer Treasured is ready.</span>
     <button class="btn sm" onclick={() => app.applyUpdate()} disabled={app.updating}>

@@ -33,30 +33,41 @@
   // Drag state. Deliberately not a velocity model: any deliberate drag past the threshold
   // moves one card, and a flick moves one card too.
   //
-  // Capture is taken lazily, and this matters more than it looks. Capturing on pointerdown
-  // retargets the subsequent pointerup *and the synthesised click* to the stage, so a card's
-  // own onclick never fires — which on a mouse made the deck a gallery you could not open
-  // anyone from. Touch got away with it because the click target is computed differently
-  // there. So: capture only once the pointer has moved far enough to be unambiguously a
-  // drag, which is also exactly when suppressing the click is what you want.
-  const DRAG_START = 10;
+  // Pointer capture and clicking are in direct conflict here, and getting the line wrong
+  // between them is what made the deck unopenable with a mouse.
+  //
+  // Capturing retargets the subsequent pointerup *and the synthesised click* to the stage,
+  // so a card's own onclick never runs. Capturing on pointerdown killed every mouse click.
+  // Capturing after a small 10px threshold was worse in a way that was harder to see: a
+  // trackpad click drifts more than 10px all the time, so clicks with a little jitter opened
+  // nothing — and, being under the 40px commit, did not advance the deck either. The
+  // interaction simply did nothing.
+  //
+  // So capture only once the gesture has already committed to being a drag, which is the
+  // one moment suppressing the click is correct — and guard selection with `movedFar` as
+  // well, rather than relying on the browser to swallow the click for us.
   const DRAG_COMMIT = 40;
 
   let startX = 0;
   let dragging = false;
   let captured = false;
+  let movedFar = false;
 
   function down(e: PointerEvent): void {
     dragging = true;
     captured = false;
+    movedFar = false;
     startX = e.clientX;
   }
 
   function move(e: PointerEvent): void {
-    if (!dragging || captured) return;
-    if (Math.abs(e.clientX - startX) <= DRAG_START) return;
+    if (!dragging) return;
+    if (Math.abs(e.clientX - startX) < DRAG_COMMIT) return;
+    movedFar = true;
+    if (captured) return;
     captured = true;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    // only now, when the click is genuinely unwanted
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* not fatal */ }
   }
 
   function up(e: PointerEvent): void {
@@ -66,6 +77,13 @@
     const dx = e.clientX - startX;
     if (Math.abs(dx) < DRAG_COMMIT) return;
     step(dx < 0 ? 1 : -1);
+  }
+
+  /** A drag that moved the deck must not also open the card it finished on. */
+  function open(personId: string): void {
+    if (movedFar) return;
+    data.activePersonId = personId;
+    router.root('/today');
   }
 </script>
 
@@ -109,7 +127,7 @@
         <DeckCard
           {person}
           offset={i - index}
-          onselect={() => { data.activePersonId = person.id; router.root('/today'); }}
+          onselect={() => open(person.id)}
         />
       {/each}
     </div>

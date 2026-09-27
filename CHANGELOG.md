@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] — 2026-09-27
+
+### Fixed
+
+- **"A newer Treasured is ready" would not stop asking, even after updating.** Three causes,
+  all now addressed. The service worker script was being answered from the HTTP cache —
+  GitHub Pages serves it with `max-age=600` — so the browser could compare a stale script
+  against a newer installed one and conclude, repeatedly, that an update was available;
+  registration now uses `updateViaCache: 'none'`. And when a waiting worker refuses to hand
+  over, the old code reloaded anyway after three seconds, which achieved nothing except to
+  show the notice again on the next load, forever. It now says what is actually true: the
+  update is downloaded and will finish once Treasured is fully closed. The notice stops
+  asking, and Settings explains it.
+- **A deck card still would not open with a mouse.** The previous fix captured the pointer
+  after 10px of movement, which is less than a trackpad click drifts — so a click with a
+  little jitter opened nothing, and being under the 40px drag threshold it did not advance
+  the deck either. The interaction did nothing at all, which is worse than the bug it
+  replaced. Capture now waits until the gesture has committed to being a drag, and opening a
+  card is additionally guarded so a real drag cannot also open the card it lands on.
+
+[1.2.1]: https://github.com/riverma/treasured/releases/tag/v1.2.1
+
 ## [1.2.0] — 2026-09-27
 
 A UX pass over getting around the app, prompted by the deck feeling like a dead end once you
@@ -166,5 +188,5 @@ the same weight everywhere they appear.
 `connect-src 'none'` means the app cannot make a network request however the code changes,
 and `check-offline` proves it against the built output before every deploy.
 
-[Unreleased]: https://github.com/riverma/treasured/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/riverma/treasured/compare/v1.2.1...HEAD
 [1.0.0]: https://github.com/riverma/treasured/releases/tag/v1.0.0

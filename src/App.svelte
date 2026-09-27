@@ -41,7 +41,7 @@
   $effect(() => {
     const el = document.getElementById('app');
     if (!el) return;
-    el.classList.toggle('with-update', app.updateReady && !app.updateDismissed);
+    el.classList.toggle('with-update', app.updateReady && !app.updateDismissed && !app.updateStuck);
   });
 
   const screen = $derived(router.route.screen);
