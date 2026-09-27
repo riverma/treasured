@@ -14,6 +14,7 @@
   import Install from '$lib/screens/Install.svelte';
   import Onboarding from '$lib/screens/Onboarding.svelte';
   import Panes from '$lib/screens/Panes.svelte';
+  import Person from '$lib/screens/Person.svelte';
   import Settings from '$lib/screens/Settings.svelte';
   import Toast from '$lib/ui/Toast.svelte';
   import UpdateBar from '$lib/ui/UpdateBar.svelte';
@@ -58,6 +59,8 @@
   <Onboarding />
 {:else if screen === 'import'}
   <Import />
+{:else if screen === 'card'}
+  <Person />
 {:else if screen === 'install'}
   <Install />
 {:else if screen === 'settings'}

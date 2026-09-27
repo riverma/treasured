@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-09-26
+
+### Added
+
+- **A person can be changed after the fact.** Until now they were write-once: a mistyped
+  name was permanent unless you deleted them and started again — and deleting was only
+  reachable from the dev harness, which is compiled out of a production build. The edit
+  screen at `#/card/<id>` covers name, essence, relations, number, email, birthday, since
+  and their colour, and is reached by flipping a card over and tapping Edit.
+- **Remove this person**, in production for the first time. It asks once, and the keep-them
+  button carries the same weight as the confirm.
+
+### Fixed
+
+- **The app had no icon.** `apple-touch-icon` pointed at a real file that was a flat
+  placeholder square with no mark on it, so an installed Home Screen app showed nothing. The
+  icon is now the monogram the app already draws on every person card — an italic serif T on
+  glass over the dawn gradient. The letter is a path extracted from the project's own
+  Fraunces Italic at `wght 300`, not live text, so the icon does not depend on the font being
+  installed wherever it is rendered.
+- **"Not secure" in a desktop web app, and no HTTPS at all.** The certificate had never been
+  issued: the custom domain was registered with GitHub about eighty seconds before its DNS
+  record existed, so provisioning was attempted against a hostname that did not resolve, and
+  was never retried. Six days on it was still serving GitHub's own wildcard. Re-attaching the
+  domain re-triggered it; HTTPS is now issued by Let's Encrypt and enforced, and http
+  redirects.
+- The initial on a person's card is recomputed when their name changes. It was set once at
+  creation and never again, so a rename would have left the old letter behind.
+
+[1.1.0]: https://github.com/riverma/treasured/releases/tag/v1.1.0
+
 ## [1.0.1] — 2026-09-20
 
 ### Fixed
@@ -74,5 +105,5 @@ the same weight everywhere they appear.
 `connect-src 'none'` means the app cannot make a network request however the code changes,
 and `check-offline` proves it against the built output before every deploy.
 
-[Unreleased]: https://github.com/riverma/treasured/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/riverma/treasured/compare/v1.1.0...HEAD
 [1.0.0]: https://github.com/riverma/treasured/releases/tag/v1.0.0

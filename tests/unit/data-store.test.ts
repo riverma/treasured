@@ -90,6 +90,60 @@ describe('reads', () => {
   });
 });
 
+describe('editing someone', () => {
+  it('persists a change and leaves the rest alone', async () => {
+    const before = data.person(SAMPLE_IDS[0]!)!;
+    const essence = before.essence;
+    await data.updatePerson(SAMPLE_IDS[0]!, { fullName: 'Zephyr Quill' });
+    const stored = (await onDisk()).people.find((p) => p.id === SAMPLE_IDS[0]!)!;
+    expect(stored.fullName).toBe('Zephyr Quill');
+    expect(stored.essence).toBe(essence);
+  });
+
+  it('recomputes the initial when the name changes', async () => {
+    // it was set once at creation and never again, so a rename left the old letter behind
+    await data.updatePerson(SAMPLE_IDS[0]!, { fullName: 'Zephyr Quill', name: 'Zephyr' });
+    expect((await onDisk()).people.find((p) => p.id === SAMPLE_IDS[0]!)!.initial).toBe('Z');
+  });
+
+  it('refuses to blank out a name', async () => {
+    const before = data.person(SAMPLE_IDS[1]!)!.fullName;
+    await data.updatePerson(SAMPLE_IDS[1]!, { fullName: '   ' });
+    expect(data.person(SAMPLE_IDS[1]!)!.fullName).toBe(before);
+  });
+
+  it('keeps at least one relation', async () => {
+    await data.updatePerson(SAMPLE_IDS[1]!, { relations: [] });
+    expect(data.person(SAMPLE_IDS[1]!)!.relations.length).toBeGreaterThan(0);
+  });
+
+  it('tracks whether there is any way to reach them', async () => {
+    await data.updatePerson(SAMPLE_IDS[2]!, { contact: { hasContact: false, phone: '5550100' } });
+    expect(data.person(SAMPLE_IDS[2]!)!.contact.hasContact).toBe(true);
+    await data.updatePerson(SAMPLE_IDS[2]!, { contact: { hasContact: true, phone: '', email: '' } });
+    expect(data.person(SAMPLE_IDS[2]!)!.contact.hasContact).toBe(false);
+  });
+
+  it('changes the palette, which is how a person is recognised', async () => {
+    await data.updatePerson(SAMPLE_IDS[3]!, { paletteKey: 'teal' });
+    const stored = (await onDisk()).people.find((p) => p.id === SAMPLE_IDS[3]!)!;
+    expect(stored.palette.key).toBe('teal');
+    expect(stored.palette.gradientColors.length).toBe(4);
+  });
+
+  it('moves updatedAt forward', async () => {
+    const before = data.person(SAMPLE_IDS[4]!)!.updatedAt;
+    await new Promise((r) => setTimeout(r, 5));
+    await data.updatePerson(SAMPLE_IDS[4]!, { essence: 'changed' });
+    expect(Date.parse(data.person(SAMPLE_IDS[4]!)!.updatedAt)).toBeGreaterThan(Date.parse(before));
+  });
+
+  it('does nothing for an id that is not here', async () => {
+    await expect(data.updatePerson('no-such-person', { fullName: 'X' })).resolves.toBeUndefined();
+    expect((await onDisk()).people).toHaveLength(11);
+  });
+});
+
 describe('rings', () => {
   it('releases the chosen person when they are not in the newly chosen ring', async () => {
     data.activePersonId = SAMPLE_IDS[0]!;          // A, who is in no ring but the default

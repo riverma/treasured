@@ -152,6 +152,46 @@ class Data {
   }
 
   /**
+   * Change someone after the fact.
+   *
+   * Until now a person was write-once: `fullName`, `essence`, `relations`, the number — all
+   * frozen at creation, so a typo in someone's name was permanent unless you deleted them
+   * and started again. That is the hole this closes.
+   *
+   * `initial` is derived, not stored input: it was computed once in `addPerson` and never
+   * again, so renaming someone would otherwise have left the old letter on their card.
+   */
+  async updatePerson(
+    personId: string,
+    patch: Partial<Pick<Person, 'fullName' | 'name' | 'essence' | 'since' | 'birthday' | 'relations' | 'contact'>>
+      & { paletteKey?: PaletteKey }
+  ): Promise<void> {
+    const p = this.person(personId);
+    if (!p) return;
+
+    if (patch.fullName !== undefined) p.fullName = patch.fullName.trim() || p.fullName;
+    if (patch.name !== undefined) {
+      p.name = patch.name.trim() || p.fullName.split(' ')[0] || p.fullName;
+    }
+    // Recomputed from whatever the name now is, never carried over.
+    p.initial = (p.name || p.fullName).trim().charAt(0).toUpperCase() || '?';
+
+    if (patch.essence !== undefined) p.essence = patch.essence.trim();
+    if (patch.since !== undefined) p.since = patch.since.trim();
+    if (patch.birthday !== undefined) p.birthday = patch.birthday;
+    if (patch.relations !== undefined && patch.relations.length) p.relations = patch.relations;
+    if (patch.contact !== undefined) {
+      const phone = patch.contact.phone?.trim() || undefined;
+      const email = patch.contact.email?.trim() || undefined;
+      p.contact = { ...p.contact, phone, email, hasContact: !!(phone || email) };
+    }
+    if (patch.paletteKey) p.palette = palette(patch.paletteKey);
+
+    p.updatedAt = new Date().toISOString();
+    await this.commit();
+  }
+
+  /**
    * Remove a person and every trace of them.
    *
    * There is no cascade to write: membership rows are filtered here and `saveData` rewrites

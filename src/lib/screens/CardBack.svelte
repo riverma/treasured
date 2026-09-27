@@ -8,6 +8,7 @@
   // Nothing here is a metric. No counts, no streaks, no score out of anything.
 
   import WeatherStrip from '$lib/ui/WeatherStrip.svelte';
+  import { router } from '$lib/store/router.svelte';
   import { gradientCss } from '$lib/data/palettes';
   import { sinceText } from '$lib/core/time';
   import { primaryRelation } from '$lib/core/types';
@@ -73,6 +74,12 @@
 
     <div class="rule" style="background: {p.softColor}"></div>
 
+    <button
+      class="edit ah-micro-caps"
+      style="color: {p.softColor}; border-color: {p.lineColor}"
+      onclick={() => router.go('/card/' + person.id)}
+    >Edit</button>
+
     <dl class="facts">
       <div>
         <dt class="ah-micro-caps" style="color: {p.softColor}">Last together</dt>
@@ -111,6 +118,15 @@
   }
 
   .quote { margin: 0; max-width: 30ch; }
+
+  /* The only way into the edit screen, and the only production route to removing someone. */
+  .edit {
+    background: none; cursor: pointer;
+    border: 1px solid; border-radius: var(--radius-full);
+    padding: 8px 18px; margin: 4px 0 12px;
+    transition: transform var(--duration-fast) var(--ease-standard);
+  }
+  .edit:active { transform: scale(0.97); }
 
   .facts { margin: 0; display: flex; gap: 28px; justify-content: center; }
   .facts div { display: flex; flex-direction: column; gap: 3px; align-items: center; }
