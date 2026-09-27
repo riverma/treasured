@@ -9,6 +9,7 @@
 
   import WeatherStrip from '$lib/ui/WeatherStrip.svelte';
   import { router } from '$lib/store/router.svelte';
+  import { data } from '$lib/store/data.svelte';
   import { gradientCss } from '$lib/data/palettes';
   import { sinceText } from '$lib/core/time';
   import { primaryRelation } from '$lib/core/types';
@@ -47,6 +48,18 @@
     </span>
 
     <h2 class="ah-heading-m name">{person.name}</h2>
+
+    <!-- The moment a card says which rings someone is in, the feature becomes visible at
+         all — and visible from the person, which is the direction it never supported. -->
+    {#if data.ringsFor(person.id).length}
+      <div class="rings">
+        {#each data.ringsFor(person.id) as ring (ring.id)}
+          <span class="ring ah-micro-caps" style="color: {p.softColor}">
+            <span class="dot" style="background: {ring.color}"></span>{ring.name}
+          </span>
+        {/each}
+      </div>
+    {/if}
 
     <div class="rule" style="background: {p.softColor}"></div>
 
@@ -109,6 +122,10 @@
   }
 
   .name { margin: 2px 0 0; font-weight: 400; }
+
+  .rings { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; margin-top: 8px; }
+  .ring { display: inline-flex; align-items: center; gap: 5px; }
+  .ring .dot { width: 6px; height: 6px; border-radius: var(--radius-full); }
   .rule { width: 24px; height: 1px; opacity: 0.6; margin: 8px 0; }
 
   .treasures {

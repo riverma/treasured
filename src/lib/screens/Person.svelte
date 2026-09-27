@@ -29,6 +29,8 @@
   let relations = $state<RelationKey[]>(['friend']);
   let paletteKey = $state<PaletteKey>('rose');
 
+  let lastSeen = $state('');
+  let newRing = $state('');
   let newTreasure = $state('');
   let newQuote = $state('');
   let loadedFor = $state<string | null>(null);
@@ -44,11 +46,29 @@
     since = p.since;
     birthday = p.birthday ?? '';
     phone = p.contact.phone ?? '';
+    // a date input wants YYYY-MM-DD in local time, not the stored ISO instant
+    lastSeen = p.lastSeenAt ? toDateInput(p.lastSeenAt) : '';
     email = p.contact.email ?? '';
     relations = [...p.relations];
     paletteKey = p.palette.key;
     loadedFor = p.id;
   });
+
+  /** ISO instant -> the YYYY-MM-DD a date input expects, in the device's own timezone. */
+  function toDateInput(iso: string): string {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  /** Back again, at midday so a timezone shift cannot move it to the day before. */
+  function fromDateInput(value: string): string | null {
+    if (!value) return null;
+    const [y, m, d] = value.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d, 12, 0, 0).toISOString();
+  }
 
   const named = $derived(fullName.trim().length > 0);
   const preview = $derived(palette(paletteKey));
@@ -64,6 +84,7 @@
     if (!p || !named || saving) return;
     saving = true;
     try {
+      await data.setLastSeen(p.id, fromDateInput(lastSeen));
       await data.updatePerson(p.id, {
         fullName: fullName.trim(),
         name: fullName.trim().split(' ')[0] ?? fullName.trim(),
@@ -84,6 +105,13 @@
     } finally {
       saving = false;
     }
+  }
+
+  async function makeRing(): Promise<void> {
+    const p = person;
+    if (!p || !newRing.trim()) return;
+    await data.addRingWith(newRing, p.id);
+    newRing = '';
   }
 
   async function addNote(kind: 'treasures' | 'quotes'): Promise<void> {
@@ -146,6 +174,34 @@
         {/each}
       </div>
 
+      <!--
+        Rings, on the person.
+
+        Membership was only ever modelled the other way round — people inside a ring, edited
+        from a sheet behind a pill on a pane you do not land on. A person's own card and
+        editor said nothing about rings at all, so there was no way to ask "what is Quill
+        part of?", and putting someone in a ring took eight taps starting from somewhere
+        else entirely. These are the same chips as the relations above, in the place you
+        already go to say who someone is.
+      -->
+      <span class="ah-micro-caps lbl spaced">Rings they're in</span>
+      <div class="wrap">
+        {#each data.slice.rings.filter((r) => !r.isDefault) as ring (ring.id)}
+          {@const member = data.inRing(ring.id, person.id)}
+          <button
+            class="chip"
+            class:selected={member}
+            onclick={() => data.setRingMembership(ring.id, person.id, !member)}
+          >
+            <span class="dot" style="background: {ring.color}"></span>{ring.name}
+          </button>
+        {/each}
+      </div>
+      <div class="addrow ringadd">
+        <input class="ah-body plain grow" bind:value={newRing} placeholder="New ring" />
+        <button class="btn sm" aria-label="Add ring" onclick={makeRing} disabled={!newRing.trim()}>Add</button>
+      </div>
+
       <label class="field spaced">
         <span class="ah-micro-caps lbl">Their number</span>
         <input class="ah-body plain" bind:value={phone} inputmode="tel" placeholder="Optional" />
@@ -155,6 +211,17 @@
         <span class="ah-micro-caps lbl">Their email</span>
         <input class="ah-body plain" bind:value={email} inputmode="email" placeholder="Optional" />
       </label>
+
+      <span class="ah-micro-caps lbl spaced">Last together</span>
+      <div class="addrow">
+        <input class="ah-body plain grow" type="date" bind:value={lastSeen} />
+        <button class="btn sm" onclick={() => (lastSeen = toDateInput(new Date().toISOString()))}>Today</button>
+      </div>
+      {#if lastSeen}
+        <button class="drop ah-micro-caps clearrow" onclick={() => (lastSeen = '')}>
+          Clear it — we haven't yet
+        </button>
+      {/if}
 
       <label class="field spaced">
         <span class="ah-micro-caps lbl">Birthday</span>
@@ -180,7 +247,7 @@
       {/if}
       <div class="addrow">
         <input class="ah-body plain grow" bind:value={newTreasure} placeholder="Add one" />
-        <button class="btn sm" onclick={() => addNote('treasures')} disabled={!newTreasure.trim()}>Add</button>
+        <button class="btn sm" aria-label="Add treasure" onclick={() => addNote('treasures')} disabled={!newTreasure.trim()}>Add</button>
       </div>
 
       <span class="ah-micro-caps lbl spaced">Their words</span>
@@ -197,7 +264,7 @@
       {/if}
       <div class="addrow">
         <input class="ah-body plain grow" bind:value={newQuote} placeholder="Add one" />
-        <button class="btn sm" onclick={() => addNote('quotes')} disabled={!newQuote.trim()}>Add</button>
+        <button class="btn sm" aria-label="Add their words" onclick={() => addNote('quotes')} disabled={!newQuote.trim()}>Add</button>
       </div>
 
       <span class="ah-micro-caps lbl spaced">Their colour</span>
@@ -302,6 +369,9 @@
   .drop { flex-shrink: 0; border: none; background: none; cursor: pointer; color: var(--text-muted); padding: 8px; }
 
   .addrow { display: flex; align-items: center; gap: 8px; }
+  .ringadd { margin-top: 10px; }
+  .chip .dot { width: 7px; height: 7px; border-radius: var(--radius-full); margin-right: 6px; flex-shrink: 0; }
+  .clearrow { display: block; margin-top: 8px; padding-left: 0; }
 
   .go { display: flex; flex-direction: column; gap: 8px; margin-top: 26px; }
   .group { display: flex; flex-direction: column; gap: 10px; }

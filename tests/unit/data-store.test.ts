@@ -145,22 +145,49 @@ describe('editing someone', () => {
 });
 
 describe('rings', () => {
-  it('releases the chosen person when they are not in the newly chosen ring', async () => {
+  it('leaves the chosen person alone when the ring changes', async () => {
+    // The ring is how you browse the deck, not a scope on Today. Switching it used to
+    // silently swap out the person you were looking at, with no explanation.
     data.activePersonId = SAMPLE_IDS[0]!;          // A, who is in no ring but the default
     await data.setActiveRing('ring-2');             // holds B, C, D
-    expect(data.activePersonId).toBeNull();
-  });
-
-  it('keeps the chosen person when they are in the new ring', async () => {
-    data.activePersonId = SAMPLE_IDS[1]!;          // B, a member of ring-2
-    await data.setActiveRing('ring-2');
-    expect(data.activePersonId).toBe(SAMPLE_IDS[1]!);
+    expect(data.activePersonId).toBe(SAMPLE_IDS[0]!);
   });
 
   it('ignores a ring that does not exist', async () => {
     const before = data.slice.activeRingId;
     await data.setActiveRing('no-such-ring');
     expect(data.slice.activeRingId).toBe(before);
+  });
+});
+
+describe('last together', () => {
+  it('can be set by hand, which nothing could do before', async () => {
+    await data.reset(sampleData());
+    const id = SAMPLE_IDS[0]!;
+    const when = '2026-09-01T12:00:00.000Z';
+    await data.setLastSeen(id, when);
+    expect((await onDisk()).people.find((p) => p.id === id)!.lastSeenAt).toBe(when);
+  });
+
+  it('can be cleared back to never', async () => {
+    await data.reset(sampleData());
+    const id = SAMPLE_IDS[0]!;
+    await data.setLastSeen(id, null);
+    expect((await onDisk()).people.find((p) => p.id === id)!.lastSeenAt).toBeNull();
+  });
+
+  it('moves updatedAt, so the change is not invisible to sorting', async () => {
+    await data.reset(sampleData());
+    const id = SAMPLE_IDS[0]!;
+    const before = data.person(id)!.updatedAt;
+    await new Promise((r) => setTimeout(r, 5));
+    await data.setLastSeen(id, new Date().toISOString());
+    expect(Date.parse(data.person(id)!.updatedAt)).toBeGreaterThan(Date.parse(before));
+  });
+
+  it('does nothing for someone who is not here', async () => {
+    await data.reset(sampleData());
+    await expect(data.setLastSeen('nobody', new Date().toISOString())).resolves.toBeUndefined();
   });
 });
 
@@ -218,6 +245,42 @@ describe('rings exist at all', () => {
     const before = data.slice.rings.length;
     expect(await data.addRing('   ')).toBeUndefined();
     expect(data.slice.rings).toHaveLength(before);
+  });
+});
+
+describe('rings, from the person', () => {
+  it('lists the rings a person is in, which nothing could ask before', async () => {
+    await data.reset(sampleData());
+    // ring-2 holds B, C, D
+    expect(data.ringsFor(SAMPLE_IDS[1]!).map((r) => r.id)).toEqual(['ring-2']);
+    expect(data.ringsFor(SAMPLE_IDS[0]!)).toEqual([]);
+  });
+
+  it('never lists the default ring, which everyone is in by definition', async () => {
+    await data.reset(sampleData());
+    expect(data.ringsFor(SAMPLE_IDS[1]!).some((r) => r.isDefault)).toBe(false);
+  });
+
+  it('answers membership directly', async () => {
+    await data.reset(sampleData());
+    expect(data.inRing('ring-2', SAMPLE_IDS[1]!)).toBe(true);
+    expect(data.inRing('ring-2', SAMPLE_IDS[0]!)).toBe(false);
+  });
+
+  it('creates a ring and joins it in one step', async () => {
+    await data.reset(sampleData());
+    const ring = await data.addRingWith('Climbing', SAMPLE_IDS[0]!);
+    expect(ring).toBeTruthy();
+    expect(data.inRing(ring!.id, SAMPLE_IDS[0]!)).toBe(true);
+    expect((await onDisk()).ringMembers.some((m) => m.ringId === ring!.id)).toBe(true);
+  });
+
+  it('reflects a membership change straight back', async () => {
+    await data.reset(sampleData());
+    await data.setRingMembership('ring-2', SAMPLE_IDS[0]!, true);
+    expect(data.ringsFor(SAMPLE_IDS[0]!).map((r) => r.id)).toEqual(['ring-2']);
+    await data.setRingMembership('ring-2', SAMPLE_IDS[0]!, false);
+    expect(data.ringsFor(SAMPLE_IDS[0]!)).toEqual([]);
   });
 });
 

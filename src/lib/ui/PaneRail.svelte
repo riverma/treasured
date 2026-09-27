@@ -61,20 +61,33 @@
     display: flex; flex-direction: column; align-items: center; gap: 5px;
     background: none; border: none; cursor: pointer;
     /* the painted label is small; the target is not */
-    padding: 12px 10px calc(var(--safe-bottom) + 10px);
-    color: var(--text-faint);
-    transition: color var(--duration-base) var(--ease-standard);
+    padding: 10px 12px;
+    margin-bottom: calc(var(--safe-bottom) + 6px);
+    border-radius: var(--radius-full);
+    /* --text-faint is 28% alpha, about 1.5:1 on the canvas — legible as decoration, not as
+       a control. These are the only way to reach two of the three screens, so they have to
+       look like something you can press. */
+    color: var(--text-secondary);
+    transition:
+      color var(--duration-base) var(--ease-standard),
+      background var(--duration-base) var(--ease-standard);
   }
-  .tab.on { color: var(--text-heading); }
+  .tab:active { background: var(--surface-sunk); }
 
-  /* The rule under the current pane does what the active dot used to, at a contrast that
-     can actually be seen. */
+  /* The current pane is a filled pill, which is what the rest of the app uses to say
+     "this one is selected" — see .pill.active in app.css. */
+  .tab.on {
+    color: var(--text-heading);
+    background: var(--surface-elevated);
+    box-shadow: var(--shadow-sm);
+  }
+
   .mark {
     width: 4px; height: 4px; border-radius: var(--radius-full);
-    background: currentColor; opacity: 0.35;
+    background: currentColor; opacity: 0.45;
     transition: width var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   }
-  .tab.on .mark { width: 18px; opacity: 1; }
+  .tab.on .mark { width: 16px; opacity: 1; }
 
   @media (prefers-reduced-motion: reduce) {
     .tab, .mark { transition: none; }

@@ -97,7 +97,7 @@
   .cog {
     flex-shrink: 0;
     background: none; border: none; cursor: pointer;
-    color: var(--text-faint);
+    color: var(--text-muted);
     padding: 12px 6px calc(var(--safe-bottom) + 10px);
   }
 

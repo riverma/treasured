@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-09-27
+
+Rings were built as a global mode when every instinct treats them as a property of a person.
+That is why they did not feel like a usable feature: membership was only ever modelled as
+"people inside a ring", never as "rings on a person", so a card never showed what someone was
+part of and putting them in a ring took eight taps starting from somewhere else entirely.
+
+### Changed
+
+- **Rings live on the person now.** The person editor has a chip per ring, beside the
+  relation chips it already had, plus a field that creates a ring and joins it in one step.
+  Two taps instead of eight, from the place you already go to say who someone is.
+- **The card shows which rings someone is in**, as coloured dots with names. There was
+  previously no way to ask the question at all.
+- **The active ring is a way of browsing the deck, not a mode over the whole app.** Today and
+  This week no longer filter by it. They answer "who needs you", and that question should not
+  have a hidden scope — when it did, choosing an empty ring made Today announce "Nobody here
+  yet" to someone with eleven people, while This week carried on listing three of them. The
+  deck now states the chosen ring in its heading rather than only in a pill.
+- Switching rings no longer silently replaces the person you were looking at.
+
+### Fixed
+
+- **"Last together" could not be set.** It had exactly one writer in the whole app — a side
+  effect of tapping a channel in the reach sheet — yet it is shown in four places and drives
+  the weekly ranking. Seeing someone in person left no way to record it, and a wrong value
+  could not be corrected. There is now a date field with a Today shortcut on the edit screen,
+  and the line on the card is itself tappable.
+- **Saving preferences silently wrote nothing** in one path. `reset()` handed the reactive
+  prefs object straight to Dexie, and a `$state` proxy cannot be structured-cloned — the
+  same DataCloneError the data slice has been guarded against since the beginning. Prefs now
+  snapshot at the single write path, so no caller has to remember.
+- The pane rail read as decoration rather than controls: the inactive labels were at 28%
+  alpha, roughly 1.5:1 on the canvas. They are legible now, and the current pane is a filled
+  pill matching how the rest of the app marks a selection.
+- In the rings sheet: removing a ring no longer presents the destructive choice as the
+  dominant one, the default row explains why it has no controls instead of showing a dead
+  label shaped like a disabled button, the active ring is announced to assistive technology,
+  per-row buttons have distinct names, and the small controls meet the 44px floor.
+- Four buttons named only "Add" — three of them on one screen — now have distinct
+  accessible names.
+
+[1.4.0]: https://github.com/riverma/treasured/releases/tag/v1.4.0
+
 ## [1.3.0] — 2026-09-27
 
 A pass over persistence, prompted by the app appearing not to keep its state. The database
@@ -233,5 +277,5 @@ the same weight everywhere they appear.
 `connect-src 'none'` means the app cannot make a network request however the code changes,
 and `check-offline` proves it against the built output before every deploy.
 
-[Unreleased]: https://github.com/riverma/treasured/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/riverma/treasured/compare/v1.4.0...HEAD
 [1.0.0]: https://github.com/riverma/treasured/releases/tag/v1.0.0

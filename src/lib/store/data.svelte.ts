@@ -112,9 +112,18 @@ class Data {
     });
   }
 
+  /**
+   * The only prefs write path, and it snapshots for the same reason `commit()` does.
+   *
+   * A `$state` proxy cannot be structured-cloned, and Dexie answers one with DataCloneError
+   * — the write silently does nothing. `commit()` has guarded against this since the start;
+   * prefs did not, and the moment something passed `this.prefs` itself rather than a plain
+   * literal, saving the whole slice began to fail. Snapshot here so no caller has to know.
+   */
   async setPrefs(p: Partial<Prefs>): Promise<void> {
-    this.prefs = { ...this.prefs, ...p };
-    await savePrefs(this.db, p);
+    const plain = $state.snapshot(p) as Partial<Prefs>;
+    this.prefs = { ...this.prefs, ...plain };
+    await savePrefs(this.db, plain);
   }
 
   // ---- reads -------------------------------------------------------------
@@ -165,6 +174,22 @@ class Data {
     if (!p) return;
     p.lastSeenAt = at;
     p.updatedAt = at;
+    await this.commit();
+  }
+
+  /**
+   * Set when you last saw someone, or clear it.
+   *
+   * Until now `lastSeenAt` had exactly one writer in the whole app — a side effect of
+   * tapping a channel in the reach sheet. So it was shown on Today, on the card back and in
+   * the weekly three, drove the whole ranking, and could not be set or corrected by hand.
+   * Seeing someone in person left no way to record it.
+   */
+  async setLastSeen(personId: string, at: string | null): Promise<void> {
+    const p = this.person(personId);
+    if (!p) return;
+    p.lastSeenAt = at;
+    p.updatedAt = new Date().toISOString();
     await this.commit();
   }
 
@@ -369,6 +394,26 @@ class Data {
     return ring;
   }
 
+  /** Which rings a person is in. The reverse of `peopleInRing`, and the direction the UI
+   *  never supported — membership was only ever modelled as people inside a ring. */
+  ringsFor(personId: string): Ring[] {
+    const ids = new Set(
+      this.slice.ringMembers.filter((m) => m.personId === personId).map((m) => m.ringId)
+    );
+    return this.slice.rings.filter((r) => !r.isDefault && ids.has(r.id));
+  }
+
+  inRing(ringId: string, personId: string): boolean {
+    return this.slice.ringMembers.some((m) => m.ringId === ringId && m.personId === personId);
+  }
+
+  /** Make a ring and put someone in it, which is what "new ring" almost always means. */
+  async addRingWith(name: string, personId: string): Promise<Ring | undefined> {
+    const ring = await this.addRing(name);
+    if (ring) await this.setRingMembership(ring.id, personId, true);
+    return ring;
+  }
+
   async renameRing(ringId: string, name: string): Promise<void> {
     const ring = this.slice.rings.find((r) => r.id === ringId);
     const clean = name.trim();
@@ -392,12 +437,9 @@ class Data {
   async setActiveRing(ringId: string): Promise<void> {
     if (!this.slice.rings.some((r) => r.id === ringId)) return;
     this.slice.activeRingId = ringId;
-    // The person you were looking at may not be in the ring you just chose. Leaving them
-    // on Today would show someone the ring says you are not currently browsing, so the
-    // choice is released and Today falls back to ranking within the new ring.
-    if (this.activePersonId && !this.peopleInRing(ringId).some((p) => p.id === this.activePersonId)) {
-      this.activePersonId = null;
-    }
+    // The pinned person is deliberately left alone now. Today is no longer ring-scoped, so
+    // changing how you are browsing the deck has no business silently replacing the person
+    // you were looking at — which it used to do, with no toast and no explanation.
     await this.commit();
   }
 
@@ -444,7 +486,7 @@ class Data {
       // next boot reads prefs that no longer exist. Someone restoring a backup has plainly
       // been through onboarding already, so do not send them round it again.
       this.prefs = { ...this.prefs, onboarded: true };
-      await savePrefs(this.db, this.prefs);
+      await savePrefs(this.db, $state.snapshot(this.prefs) as Prefs);
     }
   }
 }

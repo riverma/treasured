@@ -16,15 +16,19 @@
   import { sinceText } from '$lib/core/time';
   import { sentiments } from '$lib/core/sentiments';
 
-  // Whoever you picked from the deck, if they are still in the ring you are browsing.
-  // Otherwise whoever most needs attention — which is what Today is for when you have not
-  // asked for anyone in particular.
-  const inRing = $derived(data.peopleInRing(data.slice.activeRingId));
-  const chosen = $derived(inRing.find((p) => p.id === data.activePersonId));
+  // Whoever you picked from the deck, otherwise whoever most needs attention.
+  //
+  // Deliberately NOT scoped to the active ring. Today and This week answer "who needs you",
+  // and that question should not have a hidden scope — when it did, choosing an empty ring
+  // made Today announce "Nobody here yet" to someone with eleven people, while This week
+  // (which never filtered) carried on listing three of them. The ring is a way of browsing
+  // the deck, so it belongs to the deck.
+  const everyone = $derived(data.slice.people);
+  const chosen = $derived(everyone.find((p) => p.id === data.activePersonId));
   const person = $derived(
     chosen
-      ?? rankForConnections(inRing.filter((p) => !data.isSuppressed(p.id)), 1)[0]
-      ?? inRing[0]
+      ?? rankForConnections(everyone.filter((p) => !data.isSuppressed(p.id)), 1)[0]
+      ?? everyone[0]
   );
 
   let sheet = $state<'message' | 'call' | null>(null);
@@ -80,9 +84,15 @@
         <h1 class="ah-display-l name">{person.fullName}</h1>
         <p class="ah-caption essence" style="color: {palette!.softColor}">{person.essence}</p>
 
-        <span class="ah-micro-caps" style="color: {palette!.softColor}">
+        <!-- Tappable, because seeing someone is the single most common thing to record and
+             it had no affordance anywhere in the app. -->
+        <button
+          class="seen ah-micro-caps"
+          style="color: {palette!.softColor}"
+          onclick={() => data.setLastSeen(person.id, new Date().toISOString())}
+        >
           Last together · {sinceText(person.lastSeenAt)}
-        </span>
+        </button>
 
         <div class="rule" style="background: {palette!.softColor}"></div>
 
@@ -147,6 +157,13 @@
     font-style: italic;
     font-weight: 300;
   }
+
+  .seen {
+    background: none; border: none; cursor: pointer;
+    padding: 6px 10px; border-radius: var(--radius-full);
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .seen:active { background: var(--glass-overlay); }
 
   .name { margin: 0; font-weight: 400; }
   .essence { margin: 6px 0 12px; }

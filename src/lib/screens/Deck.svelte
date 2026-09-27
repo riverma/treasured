@@ -91,9 +91,11 @@
   <div class="hdr">
     <div class="grow">
       <span class="ah-micro-caps faint">Deck</span>
-      <h2 class="ah-heading-m head">Your people</h2>
+      <h2 class="ah-heading-m head">
+        {data.activeRing && !data.activeRing.isDefault ? data.activeRing.name : 'Your people'}
+      </h2>
     </div>
-    <button class="pill" onclick={() => router.go('/onboarding/person')}>Add</button>
+    <button class="pill" aria-label="Add someone" onclick={() => router.go('/onboarding/person')}>Add</button>
     <button class="pill" onclick={() => (rings = true)}>
       <span class="dot" style="background: {data.activeRing?.color ?? 'var(--amber-600)'}"></span>
       {data.activeRing?.name ?? 'Everyone'}
@@ -107,7 +109,7 @@
       <p class="ah-body-serif soft">
         {data.slice.people.length === 0
           ? "Nobody here yet. Add someone whenever you're ready."
-          : 'This ring is empty. Everyone you have is still in the others.'}
+          : 'Nobody is in this ring yet. You can add people to it from their own card.'}
       </p>
       {#if data.slice.people.length === 0}
         <button class="btn" onclick={() => router.go('/onboarding/person')}>Add someone</button>

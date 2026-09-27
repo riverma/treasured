@@ -51,7 +51,7 @@
           onclick={() => data.setRingMembership(editingRing.id, person.id, !member)}
         >
           <span class="ah-title-m">{person.name}</span>
-          <span class="ah-micro-caps mark">{member ? 'In' : 'Add'}</span>
+          <span class="ah-micro-caps mark">{member ? 'In' : 'Not in'}</span>
         </button>
       {/each}
       {#if data.slice.people.length === 0}
@@ -64,17 +64,27 @@
     <div class="list">
       {#each data.slice.rings as ring (ring.id)}
         <div class="row ring" class:current={ring.id === data.slice.activeRingId}>
-          <button class="pickable" onclick={() => pick(ring.id)}>
+          <button
+            class="pickable"
+            onclick={() => pick(ring.id)}
+            aria-current={ring.id === data.slice.activeRingId ? 'true' : undefined}
+          >
             <span class="dot" style="background: {ring.color}"></span>
-            <span class="ah-title-m grow">{ring.name}</span>
-            <span class="ah-micro-caps mark">{data.ringCount(ring.id)}</span>
+            <span class="col grow">
+              <span class="ah-title-m">{ring.name}</span>
+              {#if ring.isDefault}
+                <!-- Say why this row has no controls, rather than leaving a dead label that
+                     looks like a disabled button. -->
+                <span class="ah-caption quiet">Everyone you treasure. This one keeps itself.</span>
+              {/if}
+            </span>
+            <span class="ah-micro-caps mark">
+              {data.ringCount(ring.id)} {data.ringCount(ring.id) === 1 ? 'person' : 'people'}
+            </span>
           </button>
           {#if !ring.isDefault}
-            <button class="edit ah-micro-caps" onclick={() => (editing = ring.id)}>Who</button>
-            <button class="edit ah-micro-caps" onclick={() => (confirmDrop = ring.id)}>Remove</button>
-          {:else}
-            <!-- The default ring means everyone, computed. There is nothing to edit. -->
-            <span class="edit ah-micro-caps soft">Everyone</span>
+            <button class="edit ah-micro-caps" aria-label="Who is in {ring.name}" onclick={() => (editing = ring.id)}>Who</button>
+            <button class="edit ah-micro-caps" aria-label="Remove {ring.name}" onclick={() => (confirmDrop = ring.id)}>Remove</button>
           {/if}
         </div>
 
@@ -84,7 +94,8 @@
               Removing {ring.name} keeps everyone in it — only the ring goes.
             </p>
             <div class="pair">
-              <button class="btn sm" onclick={() => { data.deleteRing(ring.id); confirmDrop = null; }}>
+              <!-- Both ghost: removing must not be the visually dominant choice. -->
+              <button class="btn sm ghost" onclick={() => { data.deleteRing(ring.id); confirmDrop = null; }}>
                 Remove it
               </button>
               <button class="btn sm ghost" onclick={() => (confirmDrop = null)}>Keep it</button>
@@ -97,7 +108,7 @@
     <!-- Rings could be picked and their membership edited, but never created. -->
     <div class="addrow">
       <input class="ah-body plain" bind:value={newName} placeholder="New ring" />
-      <button class="btn sm" onclick={create} disabled={!newName.trim()}>Add</button>
+      <button class="btn sm" aria-label="Add ring" onclick={create} disabled={!newName.trim()}>Add</button>
     </div>
   {/if}
 </Sheet>
@@ -127,15 +138,23 @@
 
   .dot { width: 8px; height: 8px; border-radius: var(--radius-full); flex-shrink: 0; }
   .grow { flex: 1; min-width: 0; }
-  .mark { color: inherit; opacity: 0.6; }
+  .mark { color: inherit; opacity: 0.6; flex-shrink: 0; }
+  .col { display: flex; flex-direction: column; gap: 2px; text-align: left; min-width: 0; }
+  .quiet { color: inherit; opacity: 0.6; }
 
   .edit {
-    flex-shrink: 0; border: none; background: none; cursor: pointer;
+    position: relative; flex-shrink: 0; border: none; background: none; cursor: pointer;
     color: var(--text-secondary); padding: 14px 10px;
   }
+  /* under the 44px floor as drawn; the painting does not change */
+  .edit::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 50%;
+    transform: translateY(-50%); height: 44px;
+  }
 
-  /* Being in a ring is marked, not rewarded. */
-  .row.member { background: var(--text-heading); color: var(--text-inverse); }
+  /* Being in a ring is marked, not rewarded — so not the filled treatment the app uses for
+     a selected chip and for the active ring. */
+  .row.member { box-shadow: inset 0 0 0 1px var(--border-strong); }
 
   .soft { color: var(--text-secondary); }
 

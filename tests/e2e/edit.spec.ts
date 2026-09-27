@@ -100,3 +100,80 @@ test('a person can be removed, and asks once before doing it', async ({ page }) 
   await page.waitForTimeout(1800);
   expect(await peopleRows(page)).toBe(0);
 });
+
+test('last together can be set by hand', async ({ page }) => {
+  // It had exactly one writer in the whole app — a side effect of tapping a channel in the
+  // reach sheet — so seeing someone in person left no way at all to record it.
+  await addSomeone(page, 'Quill');
+  await page.locator('.turn').click();
+  await page.waitForTimeout(900);
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.waitForTimeout(700);
+
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.waitForTimeout(1200);
+  await page.reload();
+  await page.waitForTimeout(1800);
+
+  // the card says so, rather than "not yet"
+  await expect(page.locator('.seen')).toContainText('just now');
+});
+
+test('a person can be put in a ring from their own card', async ({ page }) => {
+  // The whole of the owner's complaint: membership was only ever modelled as people inside
+  // a ring, edited from a sheet behind a pill on a pane you do not land on. A person's card
+  // and editor said nothing about rings, so there was no way to ask what someone is part of.
+  await addSomeone(page, 'Quill');
+  await page.locator('.turn').click();
+  await page.waitForTimeout(900);
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.waitForTimeout(700);
+
+  await page.getByPlaceholder('New ring').fill('Climbing');
+  await page.getByRole('button', { name: 'Add ring' }).click();
+  await page.waitForTimeout(1000);
+
+  // the chip is now there and selected, without leaving the person
+  const chip = page.locator('.chip', { hasText: 'Climbing' });
+  await expect(chip).toHaveClass(/selected/);
+
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.waitForTimeout(1000);
+  await page.locator('.turn').click();
+  await page.waitForTimeout(1000);
+
+  // and the card says so
+  await expect(page.locator('.rings')).toContainText('Climbing');
+});
+
+test('an empty ring does not make Today claim you know nobody', async ({ page }) => {
+  // Today used to be scoped to the active ring, so choosing an empty one showed the
+  // fresh-install line to someone with people — while This week, which never filtered,
+  // carried on listing them.
+  await addSomeone(page, 'Quill');
+  await page.locator('.turn').click();
+  await page.waitForTimeout(900);
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.waitForTimeout(700);
+  await page.getByPlaceholder('New ring').fill('Book club');
+  await page.getByRole('button', { name: 'Add ring' }).click();
+  await page.waitForTimeout(900);
+  // leave the ring, so it is empty
+  await page.locator('.chip', { hasText: 'Book club' }).click();
+  await page.waitForTimeout(700);
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.waitForTimeout(1000);
+
+  await page.locator('[role="tab"]').filter({ hasText: 'Deck' }).click();
+  await page.waitForTimeout(900);
+  await page.locator('.pill', { hasText: 'Everyone' }).click();
+  await page.waitForTimeout(800);
+  await page.locator('.pickable', { hasText: 'Book club' }).click();
+  await page.waitForTimeout(1000);
+
+  await page.locator('[role="tab"]').filter({ hasText: 'Today' }).click();
+  await page.waitForTimeout(1100);
+  await expect(page.locator('.pane[aria-label="Today"]')).not.toContainText('Nobody here yet');
+  await expect(page.locator('.pane[aria-label="Today"] h1')).toContainText('Quill');
+});
