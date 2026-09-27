@@ -1,6 +1,6 @@
 {
   "name": "treasured",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "private": true,
   "description": "A wallet for the people you love. Offline-first, no accounts, no servers.",
   "license": "AGPL-3.0-or-later",

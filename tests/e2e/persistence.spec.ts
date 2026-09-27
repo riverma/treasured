@@ -47,8 +47,10 @@ test('a fresh install holds nobody at all', async ({ page }) => {
   // Either the database was never created, or it exists and is empty. Both are correct;
   // what must never happen is people appearing that the user did not put there.
   expect(counts.people ?? 0).toBe(0);
-  expect(counts.rings ?? 0).toBe(0);
   expect(counts.ringMembers ?? 0).toBe(0);
+  // One ring — "Everyone" — is created on first boot. It holds no membership rows: it means
+  // everyone, computed. Without it the whole ring feature was dead on a real install.
+  expect(counts.rings ?? 0).toBe(1);
 });
 
 test('the empty state is shown rather than invented data', async ({ page }) => {

@@ -23,6 +23,55 @@
   let feeling = $state<SentimentKey>('warm');
   let saving = $state(false);
 
+  /**
+   * Restore a half-finished person, once.
+   *
+   * This has to wait for `data.ready`: prefs are read from IndexedDB asynchronously, so at
+   * the moment this component is constructed `data.prefs.draft` is always still the default
+   * null, and reading it there silently restored nothing.
+   */
+  let restored = $state(false);
+  $effect(() => {
+    if (restored || !data.ready) return;
+    restored = true;
+    const d = data.prefs.draft;
+    if (!d) return;
+    step = d.step;
+    fullName = d.fullName;
+    essence = d.essence;
+    relations = (d.relations as RelationKey[]).length ? (d.relations as RelationKey[]) : ['friend'];
+    phone = d.phone;
+    feeling = d.feeling as SentimentKey;
+  });
+
+  /**
+   * Keep the half-finished person on disk.
+   *
+   * Nothing here reached storage until the very last button, so backgrounding the app at
+   * step two threw away everything typed — and put you back on the welcome screen, which
+   * made it look like the app had forgotten you entirely. Debounced, because this runs on
+   * every keystroke.
+   */
+  let draftTimer: ReturnType<typeof setTimeout> | null = null;
+  $effect(() => {
+    const snapshot = {
+      step, fullName, essence, relations: [...relations], phone, feeling
+    };
+    // do not write over a stored draft with blanks before it has been restored
+    if (!restored) return;
+    // nothing typed yet is not worth remembering
+    if (!snapshot.fullName.trim() && snapshot.step === 0) return;
+    if (draftTimer) clearTimeout(draftTimer);
+    draftTimer = setTimeout(() => { void data.setPrefs({ draft: snapshot }); }, 400);
+    return () => { if (draftTimer) clearTimeout(draftTimer); };
+  });
+
+  /** Once they are saved or the person walks away, the draft has done its job. */
+  function clearDraft(): Promise<void> {
+    if (draftTimer) clearTimeout(draftTimer);
+    return data.setPrefs({ draft: null });
+  }
+
   const named = $derived(fullName.trim().length > 0);
 
   function toggleRelation(r: RelationKey): void {
@@ -45,7 +94,7 @@
       });
       await data.recordSentiment(person.id, feeling);
       data.activePersonId = person.id;
-      await data.setPrefs({ onboarded: true });
+      await data.setPrefs({ onboarded: true, draft: null });
       router.root('/today');
     } catch (e) {
       // Whatever went wrong, the one thing that must not happen is nothing: a button that
@@ -59,6 +108,7 @@
   }
 
   async function leave(): Promise<void> {
+    await clearDraft();
     await data.setPrefs({ onboarded: true });
     router.root('/today');
   }

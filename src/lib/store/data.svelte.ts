@@ -10,6 +10,7 @@
 
 import type { AppData, PaletteKey, Person, Ring, SentimentKey } from '$lib/core/types';
 import { MAX_SENTIMENT_HISTORY } from '$lib/core/types';
+import { app } from '$lib/store/app.svelte';
 import { newId } from '$lib/core/id';
 import { palette, paletteForNewPerson } from '$lib/data/palettes';
 import {
@@ -25,6 +26,13 @@ class Data {
   /** True when this device has never held any data. Drives onboarding. */
   fresh = $state(false);
   /**
+   * Set when the database could not be opened or read at all — a blocked upgrade, a corrupt
+   * store, private browsing with IndexedDB denied. Without this the boot read's rejection
+   * went nowhere, `ready` stayed false, and the app sat on "Opening…" forever. From the
+   * outside that is indistinguishable from having lost everything.
+   */
+  loadError = $state<string | null>(null);
+  /**
    * Whoever you last chose from the deck. Not persisted: which card you were looking at is
    * a property of this glance at the app, not of the people you know. When it is unset,
    * or when they are not in the ring you are browsing, Today falls back to the ranking.
@@ -39,12 +47,21 @@ class Data {
    * which is the only way anyone gets data into this app.
    */
   async load(): Promise<void> {
-    const { data, prefs, fresh } = await loadAll(this.db);
-    this.prefs = prefs;
-    this.slice = data;
-    this.fresh = fresh;
-    this.ready = true;
-    if (!fresh) void requestPersistence();
+    try {
+      const { data, prefs, fresh } = await loadAll(this.db);
+      this.prefs = prefs;
+      this.slice = data;
+      this.fresh = fresh;
+      this.loadError = null;
+      this.ready = true;
+      await this.ensureDefaultRing();
+      if (!fresh) void requestPersistence();
+    } catch (e) {
+      console.error('could not open the database', e);
+      this.loadError = e instanceof Error ? e.message : String(e);
+      // ready, but empty and honest about why — never a permanent "Opening…"
+      this.ready = true;
+    }
   }
 
   /**
@@ -56,7 +73,43 @@ class Data {
    * there is exactly one place that has to remember to snapshot.
    */
   private async commit(): Promise<void> {
-    await saveData(this.db, $state.snapshot(this.slice) as AppData);
+    try {
+      await saveData(this.db, $state.snapshot(this.slice) as AppData);
+      this.pendingWrite = false;
+    } catch (e) {
+      // Most mutations are fired and not awaited — a sentiment tap, a ring toggle, the
+      // country code. Their rejections used to vanish into an unhandled promise, so a
+      // storage failure looked exactly like nothing happening. Say it once, here.
+      console.error('could not save', e);
+      this.pendingWrite = true;
+      app.say('That did not save. Your device may be out of room.');
+      throw e;
+    }
+  }
+
+  /** True when the last write failed. Settings surfaces it. */
+  pendingWrite = $state(false);
+
+  /**
+   * Write now, synchronously enough to survive the page going away.
+   *
+   * Giraffy flushes on pagehide and on the tab being hidden, which matters most on a phone:
+   * swiping the app away mid-write would otherwise lose whatever had not landed.
+   */
+  flush(): void {
+    if (!this.ready) return;
+    void saveData(this.db, $state.snapshot(this.slice) as AppData).catch((e) => {
+      console.error('flush failed', e);
+    });
+  }
+
+  /** Called once at boot. */
+  watchLifecycle(): void {
+    if (typeof window === 'undefined') return;
+    window.addEventListener('pagehide', () => this.flush());
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') this.flush();
+    });
   }
 
   async setPrefs(p: Partial<Prefs>): Promise<void> {
@@ -192,6 +245,48 @@ class Data {
   }
 
   /**
+   * The small true things, and their words.
+   *
+   * `Treasure` has carried an `id` and a `position` since the first commit, with a comment
+   * explaining they exist so a row can be edited, reordered or removed without a migration.
+   * Nothing ever wrote one — both arrays were initialised to `[]` and never touched again,
+   * so the two sections on the back of every card could not appear. This is the writer.
+   */
+  async addNote(personId: string, kind: 'treasures' | 'quotes', content: string): Promise<void> {
+    const p = this.person(personId);
+    const text = content.trim();
+    if (!p || !text) return;
+    const list = p[kind];
+    p[kind] = [...list, {
+      id: newId(),
+      content: text,
+      position: list.length,
+      createdAt: new Date().toISOString()
+    }];
+    p.updatedAt = new Date().toISOString();
+    await this.commit();
+  }
+
+  async editNote(personId: string, kind: 'treasures' | 'quotes', noteId: string, content: string): Promise<void> {
+    const p = this.person(personId);
+    const text = content.trim();
+    if (!p) return;
+    if (!text) return this.removeNote(personId, kind, noteId);
+    p[kind] = p[kind].map((n) => (n.id === noteId ? { ...n, content: text } : n));
+    p.updatedAt = new Date().toISOString();
+    await this.commit();
+  }
+
+  async removeNote(personId: string, kind: 'treasures' | 'quotes', noteId: string): Promise<void> {
+    const p = this.person(personId);
+    if (!p) return;
+    // positions are renumbered so they stay meaningful after a removal
+    p[kind] = p[kind].filter((n) => n.id !== noteId).map((n, i) => ({ ...n, position: i }));
+    p.updatedAt = new Date().toISOString();
+    await this.commit();
+  }
+
+  /**
    * Remove a person and every trace of them.
    *
    * There is no cascade to write: membership rows are filtered here and `saveData` rewrites
@@ -209,9 +304,88 @@ class Data {
     }
   }
 
-  async setCountryCode(raw: string): Promise<void> {
+  private codeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Debounced, because this one is bound to an input's `oninput`.
+   *
+   * Every other mutation here is a discrete act — a tap, a save — and writes immediately so
+   * that awaiting it means something. This one fired a whole-slice clear-and-rewrite on
+   * every keystroke. Giraffy debounces everything at 250ms; Treasured only needs it where
+   * there is an actual write storm.
+   */
+  setCountryCode(raw: string): void {
     const digits = raw.replace(/\D/g, '').slice(0, 4);
     this.slice.countryCode = digits || '1';
+    if (this.codeTimer) clearTimeout(this.codeTimer);
+    this.codeTimer = setTimeout(() => { void this.commit().catch(() => {}); }, 250);
+  }
+
+  /**
+   * Make sure the ring everyone belongs to exists.
+   *
+   * It only ever existed in the dev fixture, so on a real install `rings` was empty forever:
+   * the Rings sheet showed nothing, `activeRing` was undefined, and the whole feature was
+   * dead while looking present. The default ring stores no membership — it means everyone,
+   * computed — so creating it costs one row and cannot drift out of step.
+   */
+  private async ensureDefaultRing(): Promise<void> {
+    if (this.slice.rings.some((r) => r.isDefault)) return;
+    const now = new Date().toISOString();
+    this.slice.rings = [
+      {
+        id: DEFAULT_RING_ID,
+        name: 'Everyone',
+        description: 'Everyone you treasure',
+        color: '#b8895a',
+        isDefault: true,
+        position: 0,
+        createdAt: now
+      },
+      ...this.slice.rings
+    ];
+    this.slice.activeRingId = this.slice.activeRingId || DEFAULT_RING_ID;
+    await this.commit();
+  }
+
+  /** Accents a new ring cycles through, so two rings are rarely the same colour. */
+  private static RING_COLOURS = ['#7a9d7f', '#6571b8', '#a692c4', '#b87859', '#6781a3', '#e08591'];
+
+  async addRing(name: string): Promise<Ring | undefined> {
+    const clean = name.trim();
+    if (!clean) return undefined;
+    const custom = this.slice.rings.filter((r) => !r.isDefault).length;
+    const ring: Ring = {
+      id: newId(),
+      name: clean,
+      description: '',
+      color: Data.RING_COLOURS[custom % Data.RING_COLOURS.length] ?? '#7a9d7f',
+      isDefault: false,
+      position: this.slice.rings.length,
+      createdAt: new Date().toISOString()
+    };
+    this.slice.rings = [...this.slice.rings, ring];
+    await this.commit();
+    return ring;
+  }
+
+  async renameRing(ringId: string, name: string): Promise<void> {
+    const ring = this.slice.rings.find((r) => r.id === ringId);
+    const clean = name.trim();
+    if (!ring || !clean) return;
+    ring.name = clean;
+    await this.commit();
+  }
+
+  /** The default ring cannot be removed: it is what "everyone" means. */
+  async deleteRing(ringId: string): Promise<void> {
+    const ring = this.slice.rings.find((r) => r.id === ringId);
+    if (!ring || ring.isDefault) return;
+    this.slice.rings = this.slice.rings.filter((r) => r.id !== ringId);
+    this.slice.ringMembers = this.slice.ringMembers.filter((m) => m.ringId !== ringId);
+    if (this.slice.activeRingId === ringId) {
+      this.slice.activeRingId = this.slice.rings.find((r) => r.isDefault)?.id ?? DEFAULT_RING_ID;
+    }
     await this.commit();
   }
 
@@ -264,7 +438,14 @@ class Data {
     this.slice = replacement ?? emptyData();
     this.prefs = { ...DEFAULT_PREFS };
     this.fresh = !replacement;
-    if (replacement) await this.commit();
+    if (replacement) {
+      await this.commit();
+      // wipe() emptied the settings table, so the defaults have to be written back or the
+      // next boot reads prefs that no longer exist. Someone restoring a backup has plainly
+      // been through onboarding already, so do not send them round it again.
+      this.prefs = { ...this.prefs, onboarded: true };
+      await savePrefs(this.db, this.prefs);
+    }
   }
 }
 

@@ -55,6 +55,14 @@
 
   {#if !data.ready}
     <div class="centre"><span class="ah-caption soft">Opening…</span></div>
+  {:else if data.loadError}
+    <div class="centre">
+      <p class="ah-body-serif soft">
+        Treasured could not open its storage on this device. Your people are most likely
+        still there — this is usually a private-browsing window, or a browser with storage
+        turned off.
+      </p>
+    </div>
   {:else if !person}
     <div class="centre">
       <p class="ah-body-serif soft">Nobody here yet. Add someone whenever you're ready.</p>

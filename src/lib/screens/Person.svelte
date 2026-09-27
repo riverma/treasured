@@ -29,6 +29,8 @@
   let relations = $state<RelationKey[]>(['friend']);
   let paletteKey = $state<PaletteKey>('rose');
 
+  let newTreasure = $state('');
+  let newQuote = $state('');
   let loadedFor = $state<string | null>(null);
   let saving = $state(false);
   let confirmingRemove = $state(false);
@@ -81,6 +83,19 @@
       app.say('That did not save. Your changes are still here — try once more.');
     } finally {
       saving = false;
+    }
+  }
+
+  async function addNote(kind: 'treasures' | 'quotes'): Promise<void> {
+    const p = person;
+    if (!p) return;
+    const text = kind === 'treasures' ? newTreasure : newQuote;
+    if (!text.trim()) return;
+    try {
+      await data.addNote(p.id, kind, text);
+      if (kind === 'treasures') newTreasure = ''; else newQuote = '';
+    } catch {
+      app.say('That did not save. Try once more.');
     }
   }
 
@@ -150,6 +165,40 @@
         <span class="ah-micro-caps lbl">Known since</span>
         <input class="ah-body plain" bind:value={since} placeholder="2014, or birth" />
       </label>
+
+      <span class="ah-micro-caps lbl spaced">Treasures</span>
+      <p class="ah-caption hint">The small true things you would otherwise forget.</p>
+      {#if person.treasures.length}
+        <ul class="notes">
+          {#each person.treasures as t (t.id)}
+            <li>
+              <span class="ah-body grow">{t.content}</span>
+              <button class="drop ah-micro-caps" onclick={() => data.removeNote(person.id, 'treasures', t.id)}>Remove</button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      <div class="addrow">
+        <input class="ah-body plain grow" bind:value={newTreasure} placeholder="Add one" />
+        <button class="btn sm" onclick={() => addNote('treasures')} disabled={!newTreasure.trim()}>Add</button>
+      </div>
+
+      <span class="ah-micro-caps lbl spaced">Their words</span>
+      <p class="ah-caption hint">Something they said that you want to keep.</p>
+      {#if person.quotes.length}
+        <ul class="notes">
+          {#each person.quotes as q (q.id)}
+            <li>
+              <span class="ah-body-serif grow quote">{q.content}</span>
+              <button class="drop ah-micro-caps" onclick={() => data.removeNote(person.id, 'quotes', q.id)}>Remove</button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      <div class="addrow">
+        <input class="ah-body plain grow" bind:value={newQuote} placeholder="Add one" />
+        <button class="btn sm" onclick={() => addNote('quotes')} disabled={!newQuote.trim()}>Add</button>
+      </div>
 
       <span class="ah-micro-caps lbl spaced">Their colour</span>
       <div class="swatches">
@@ -239,6 +288,20 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
     font-style: italic;
   }
+
+  .hint { color: var(--text-muted); margin: 4px 0 10px; }
+
+  .notes { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .notes li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border-radius: var(--radius-lg);
+    background: var(--surface-sunk);
+  }
+  .notes .quote { font-style: italic; }
+  .grow { flex: 1; min-width: 0; }
+  .drop { flex-shrink: 0; border: none; background: none; cursor: pointer; color: var(--text-muted); padding: 8px; }
+
+  .addrow { display: flex; align-items: center; gap: 8px; }
 
   .go { display: flex; flex-direction: column; gap: 8px; margin-top: 26px; }
   .group { display: flex; flex-direction: column; gap: 10px; }

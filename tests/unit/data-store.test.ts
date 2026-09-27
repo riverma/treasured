@@ -164,6 +164,126 @@ describe('rings', () => {
   });
 });
 
+describe('rings exist at all', () => {
+  it('creates the ring everyone belongs to on first boot', async () => {
+    await data.reset();              // genuinely empty, as a real install is
+    await data.load();
+    const def = data.slice.rings.find((r) => r.isDefault);
+    expect(def).toBeTruthy();
+    expect(def!.id).toBe('all');
+    // and it survives, rather than being invented fresh each boot
+    expect((await onDisk()).rings.some((r) => r.isDefault)).toBe(true);
+  });
+
+  it('does not create a second one on the next boot', async () => {
+    await data.reset();
+    await data.load();
+    await data.load();
+    expect(data.slice.rings.filter((r) => r.isDefault)).toHaveLength(1);
+  });
+
+  it('adds, renames and removes a ring', async () => {
+    await data.reset();
+    await data.load();
+    const ring = await data.addRing('  Long-time  ');
+    expect(ring!.name).toBe('Long-time');
+    expect((await onDisk()).rings.some((r) => r.id === ring!.id)).toBe(true);
+
+    await data.renameRing(ring!.id, 'Old friends');
+    expect((await onDisk()).rings.find((r) => r.id === ring!.id)!.name).toBe('Old friends');
+
+    await data.deleteRing(ring!.id);
+    expect((await onDisk()).rings.some((r) => r.id === ring!.id)).toBe(false);
+  });
+
+  it('refuses to remove the default ring', async () => {
+    await data.reset();
+    await data.load();
+    await data.deleteRing('all');
+    expect(data.slice.rings.some((r) => r.isDefault)).toBe(true);
+  });
+
+  it('falls back to the default ring when the active one is removed', async () => {
+    await data.reset();
+    await data.load();
+    const ring = await data.addRing('Work');
+    await data.setActiveRing(ring!.id);
+    await data.deleteRing(ring!.id);
+    expect(data.slice.activeRingId).toBe('all');
+  });
+
+  it('refuses a blank name', async () => {
+    await data.reset();
+    await data.load();
+    const before = data.slice.rings.length;
+    expect(await data.addRing('   ')).toBeUndefined();
+    expect(data.slice.rings).toHaveLength(before);
+  });
+});
+
+describe('treasures and their words', () => {
+  it('writes one, which nothing could do before', async () => {
+    await data.reset(sampleData());
+    const id = SAMPLE_IDS[0]!;
+    await data.addNote(id, 'treasures', '  Shows up without being asked  ');
+    const stored = (await onDisk()).people.find((p) => p.id === id)!;
+    expect(stored.treasures).toHaveLength(1);
+    expect(stored.treasures[0]!.content).toBe('Shows up without being asked');
+    expect(stored.treasures[0]!.id).toBeTruthy();
+    expect(stored.treasures[0]!.position).toBe(0);
+  });
+
+  it('keeps treasures and quotes apart', async () => {
+    await data.reset(sampleData());
+    const id = SAMPLE_IDS[0]!;
+    await data.addNote(id, 'treasures', 'a thing');
+    await data.addNote(id, 'quotes', 'a saying');
+    const stored = (await onDisk()).people.find((p) => p.id === id)!;
+    expect(stored.treasures.map((t) => t.content)).toEqual(['a thing']);
+    expect(stored.quotes.map((q) => q.content)).toEqual(['a saying']);
+  });
+
+  it('ignores an empty one', async () => {
+    await data.reset(sampleData());
+    await data.addNote(SAMPLE_IDS[0]!, 'treasures', '   ');
+    expect(data.person(SAMPLE_IDS[0]!)!.treasures).toHaveLength(0);
+  });
+
+  it('edits and removes, renumbering what is left', async () => {
+    await data.reset(sampleData());
+    const id = SAMPLE_IDS[0]!;
+    for (const t of ['one', 'two', 'three']) await data.addNote(id, 'treasures', t);
+    const second = data.person(id)!.treasures[1]!.id;
+
+    await data.editNote(id, 'treasures', second, 'second');
+    expect(data.person(id)!.treasures[1]!.content).toBe('second');
+
+    await data.removeNote(id, 'treasures', second);
+    const left = (await onDisk()).people.find((p) => p.id === id)!.treasures;
+    expect(left.map((t) => t.content)).toEqual(['one', 'three']);
+    expect(left.map((t) => t.position)).toEqual([0, 1]);
+  });
+
+  it('treats editing to empty as removing', async () => {
+    await data.reset(sampleData());
+    const id = SAMPLE_IDS[0]!;
+    await data.addNote(id, 'treasures', 'one');
+    const only = data.person(id)!.treasures[0]!.id;
+    await data.editNote(id, 'treasures', only, '  ');
+    expect(data.person(id)!.treasures).toHaveLength(0);
+  });
+});
+
+describe('the onboarding draft', () => {
+  it('survives being written and read back', async () => {
+    await data.reset();
+    await data.setPrefs({ draft: { step: 2, fullName: 'Quill', essence: 'x', relations: ['friend'], phone: '', feeling: 'warm' } });
+    const { prefs } = await loadAll(data.db);
+    expect(prefs.draft?.fullName).toBe('Quill');
+    expect(prefs.draft?.step).toBe(2);
+  });
+});
+
 describe('later', () => {
   it('suppresses for a week and says so', async () => {
     expect(data.isSuppressed(SAMPLE_IDS[4]!)).toBe(false);

@@ -26,6 +26,7 @@
 
   router.start();
   void data.load();
+  data.watchLifecycle();
 
   // The hub links to <app>.riverma.com/#install. router.start() records that and sends the
   // app to Today; this takes it the rest of the way to the guide.
@@ -47,10 +48,23 @@
   const screen = $derived(router.route.screen);
   const isDevScreen = $derived(screen === 'devdata' || screen === 'gallery');
 
-  // A device that has never held anything starts at onboarding rather than at an empty
-  // Today. There is no seed to fall back on: onboarding is how people get in.
+  // A device nobody has finished setting up starts at onboarding rather than an empty Today.
+  // There is no seed to fall back on: onboarding is how people get in.
+  //
+  // This keys off `onboarded` alone. It used to also require `fresh`, which is computed as
+  // "no settings rows and no people" — but saving an onboarding draft writes a settings row,
+  // and so does creating the default ring. So the moment either of those landed the install
+  // stopped being fresh, onboarding was skipped, and a half-finished person became
+  // unreachable. `onboarded` is the flag that actually means what this needs.
+  // Someone with people is not a new user, whatever the flag says. Onboarding saves the
+  // person before it sets `onboarded`, so a reload in the gap between the two would
+  // otherwise drop you back on the welcome screen with that person already added.
   const needsOnboarding = $derived(
-    data.ready && data.fresh && !data.prefs.onboarded && !isDevScreen && screen !== 'import'
+    data.ready
+      && !data.prefs.onboarded
+      && data.slice.people.length === 0
+      && !isDevScreen
+      && screen !== 'import'
   );
 
   $effect(() => {

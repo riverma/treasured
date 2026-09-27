@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-09-27
+
+A pass over persistence, prompted by the app appearing not to keep its state. The database
+was in fact keeping everything it was given — a person written with all eighteen fields came
+back identical after a reload. What was missing was state the app never captured, and
+robustness Giraffy has and Treasured did not.
+
+### Fixed
+
+- **No ring was ever created.** The default "Everyone" ring existed only in the development
+  fixture, so on a real install `rings` was empty forever: the Rings sheet was blank, the
+  active ring was undefined, and the whole feature was dead while appearing present. It is
+  now created on first boot, and it still stores no membership — it means everyone, computed,
+  so it cannot drift out of step with who you know.
+- **A half-finished person was lost.** Onboarding held the name, essence, relations and
+  number in component state and wrote nothing until the final button, so backgrounding the
+  app — or an iOS tab eviction — threw all of it away and returned you to the welcome screen.
+  The draft is now saved as you type and resumed where you left off.
+- **A failed boot looked like lost data.** If the database could not be opened — a blocked
+  upgrade, a private window with storage denied — the rejection went nowhere, and the app sat
+  on "Opening…" forever. It now says what happened.
+- **A failed write said nothing.** Most mutations are fired and not awaited, so a storage
+  failure was indistinguishable from nothing happening. There is now one place that knows.
+- **Nothing was written when the app went away.** A mutation in flight when you swiped the app
+  closed could be lost. It now flushes on `pagehide` and when the tab is hidden, as Giraffy
+  does.
+- **Restoring a backup left `onboarded` unset**, because the wipe emptied the settings table
+  and the defaults were never written back.
+- **The onboarding gate keyed off the wrong thing.** It used "no settings rows and no people",
+  which stopped being true the moment a draft or the default ring was written — so a resumed
+  draft became unreachable. It now keys off having finished onboarding, and treats anyone with
+  people as someone who has.
+
+### Added
+
+- **Treasures and their words can be written.** Both arrays have existed since the first
+  commit, with `id` and `position` on each row and a comment explaining they were there so a
+  row could be edited or reordered later — but nothing ever wrote one, so the two sections on
+  the back of every card could not appear. Add, edit and remove now live on the edit screen.
+- **Rings can be created and removed**, not only picked and filled. The default ring cannot be
+  removed, and removing any other keeps everyone who was in it.
+- The country-code field is debounced. It was firing a whole-slice rewrite on every keystroke.
+
+[1.3.0]: https://github.com/riverma/treasured/releases/tag/v1.3.0
+
 ## [1.2.1] — 2026-09-27
 
 ### Fixed
@@ -188,5 +233,5 @@ the same weight everywhere they appear.
 `connect-src 'none'` means the app cannot make a network request however the code changes,
 and `check-offline` proves it against the built output before every deploy.
 
-[Unreleased]: https://github.com/riverma/treasured/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/riverma/treasured/compare/v1.3.0...HEAD
 [1.0.0]: https://github.com/riverma/treasured/releases/tag/v1.0.0

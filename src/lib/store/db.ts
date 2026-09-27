@@ -44,6 +44,24 @@ export interface Prefs {
    * person the next morning teaches people to stop tapping it.
    */
   laterUntil: Record<string, string>;
+  /**
+   * The half-finished person from onboarding.
+   *
+   * Giraffy persists its entire composer draft — the words, the step, even which sections
+   * were expanded — so a backgrounded tab never costs you what you had typed. Treasured
+   * held the whole of onboarding in component-local state, so an iOS tab eviction at step
+   * two lost the name, the essence and the number, and put you back on the welcome screen.
+   */
+  draft: OnboardingDraft | null;
+}
+
+export interface OnboardingDraft {
+  step: number;
+  fullName: string;
+  essence: string;
+  relations: string[];
+  phone: string;
+  feeling: string;
 }
 
 export const DEFAULT_PREFS: Prefs = {
@@ -51,7 +69,8 @@ export const DEFAULT_PREFS: Prefs = {
   lastBackup: null,
   backupDismissed: false,
   installDismissed: false,
-  laterUntil: {}
+  laterUntil: {},
+  draft: null
 };
 
 export const DEFAULT_RING_ID = 'all';
@@ -61,7 +80,7 @@ export function emptyData(): AppData {
 }
 
 const DATA_KEYS = ['activeRingId', 'countryCode'] as const;
-const PREF_KEYS = ['onboarded', 'lastBackup', 'backupDismissed', 'installDismissed', 'laterUntil'] as const;
+const PREF_KEYS = ['onboarded', 'lastBackup', 'backupDismissed', 'installDismissed', 'laterUntil', 'draft'] as const;
 
 const CHANNELS = new Set<ChannelKey>([
   'imessage', 'whatsapp', 'signal', 'telegram', 'email',
