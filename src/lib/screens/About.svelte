@@ -30,6 +30,12 @@
 
     <dl class="facts">
       <div>
+        <dt class="ah-micro-caps faint">Made by</dt>
+        <dd class="ah-body">
+          <a href="https://riverma.com" target="_blank" rel="noopener noreferrer">Rishi Verma</a>
+        </dd>
+      </div>
+      <div>
         <dt class="ah-micro-caps faint">Licence</dt>
         <dd class="ah-body">
           <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer">

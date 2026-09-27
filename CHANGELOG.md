@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-09-27
+
+A UX pass over getting around the app, prompted by the deck feeling like a dead end once you
+had opened a card. It was not one problem but four stacked together, two of them functional
+breakage on desktop.
+
+### Fixed
+
+- **Deck cards did not open when clicked with a mouse.** Capturing the pointer on
+  `pointerdown` retargets the synthesised click to the stage, so a card's own handler never
+  ran. Touch computed the click target differently and was unaffected, which is how it
+  survived — but on the macOS dock app the deck was a gallery you could not open anyone from.
+  Capture is now taken lazily, once the pointer has moved far enough to be unambiguously a
+  drag, which is also exactly when suppressing the click is what you want.
+- **Today and This week were a one-way trap for any pointer.** `overscroll-behavior: contain`
+  was set on both axes, so a region that cannot scroll sideways still swallowed the
+  horizontal wheel instead of letting it chain out to the pane surface. Only the deck — which
+  has no scroll region — could be left. Now contained on the vertical axis only.
+- **The pane indicator was three dots that were not buttons.** Not focusable, no handler, and
+  announcing themselves to screen readers as tabs that could not be activated. They also sat
+  at 1.3:1 against the canvas, which is well under the 3:1 a control needs.
+- **Tab used to teleport you between screens.** All three panes are always in the DOM; from
+  Today, one Tab landed on the deck's offscreen Next button and six landed on a Connections
+  card, at which point the browser scrolled focus into view and the screen changed underneath
+  you. The two panes you are not looking at are now `inert`.
+- **There was no way to add a second person.** The only route was Settings → Bring people in →
+  Add by hand, and that was broken: it ignored the deep link and showed the welcome splash
+  again, looping back to the importer you had just left.
+- **A tapped deck card pinned Today to that person** for the rest of the session, with nothing
+  saying so and no way out.
+
+### Added
+
+- **A named rail** — Deck · Today · This week — replacing the dots. Words rather than a mark,
+  because the design system ships no icon set and because a word is the thing that teaches
+  someone the screen exists. Real buttons, arrow-key navigable, with the hit area at 44px
+  while the painted mark stays as small as it was.
+- **Today has a header and an Unpin control**; it was the only pane that named neither itself
+  nor anywhere else.
+- **Add** on the deck header, and in its empty state — which previously named an action the
+  screen did not offer.
+- **The update notice moved to the top** and now actually updates. A waiting service worker
+  keeps waiting until every window under the old one closes, so the old Reload button — a
+  plain `location.reload()` — brought you back on the same version. It now tells the waiting
+  worker to skip waiting and reloads once it has taken control.
+- **Check for a new version** in Settings, which says so either way: being already current is
+  an answer worth giving.
+- **About credits Rishi Verma.**
+
+### Changed
+
+- Ghost buttons carry an outline instead of being bare grey text. The rule throughout is that
+  leaving weighs the same as continuing; equal metrics alone did not deliver it, because grey
+  text beside a filled pill reads as a caption.
+- Touch targets raised to 44px — `.btn` was 40, and the small pill, ring pill and header Back
+  were all under 30. The painted sizes are unchanged; the hit areas are not.
+- The deck's previous-card button is **Previous**, not Back, which every sub-screen also uses
+  one swipe away.
+
+[1.2.0]: https://github.com/riverma/treasured/releases/tag/v1.2.0
+
 ## [1.1.0] — 2026-09-26
 
 ### Added
@@ -105,5 +166,5 @@ the same weight everywhere they appear.
 `connect-src 'none'` means the app cannot make a network request however the code changes,
 and `check-offline` proves it against the built output before every deploy.
 
-[Unreleased]: https://github.com/riverma/treasured/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/riverma/treasured/compare/v1.2.0...HEAD
 [1.0.0]: https://github.com/riverma/treasured/releases/tag/v1.0.0

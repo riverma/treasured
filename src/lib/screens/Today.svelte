@@ -42,6 +42,17 @@
 </script>
 
 <div class="screen">
+  <div class="hdr">
+    <div class="grow">
+      <span class="ah-micro-caps faint">On your mind today</span>
+    </div>
+    {#if chosen}
+      <!-- Tapping a deck card pins that person here for the rest of the session, with
+           nothing to say so and no way out of it. This is the way out. -->
+      <button class="pill" onclick={() => (data.activePersonId = null)}>Unpin</button>
+    {/if}
+  </div>
+
   {#if !data.ready}
     <div class="centre"><span class="ah-caption soft">Opening…</span></div>
   {:else if !person}
@@ -49,15 +60,13 @@
       <p class="ah-body-serif soft">Nobody here yet. Add someone whenever you're ready.</p>
     </div>
   {:else}
-    <div class="scroll tight" style="--scroll-tail: 24px">
+    <div class="scroll tight" style="--scroll-tail: 16px">
       <FlipCard {flipped} onflip={() => (flipped = !flipped)} label={flipped ? 'Front' : 'More about them'}>
         {#snippet front()}
       <div
         class="face"
         style="background: {gradientCss(palette!)}; color: {palette!.fontColor}"
       >
-        <span class="ah-micro-caps" style="color: {palette!.softColor}">On your mind today</span>
-
         <div class="mono ah-display-l" style="color: {palette!.fontColor}">{person.initial}</div>
 
         <h1 class="ah-display-l name">{person.fullName}</h1>
@@ -114,13 +123,13 @@
   .face {
     display: flex; flex-direction: column; align-items: center; text-align: center;
     border-radius: var(--radius-3xl);
-    padding: 32px 24px 28px;
+    padding: 24px 22px 22px;
     box-shadow: var(--shadow-lg);
   }
 
   /* Ahimsa's monogram: an initial in italic serif on glass, never a photograph. */
   .mono {
-    width: 104px; height: 104px; margin: 14px 0 18px;
+    width: 92px; height: 92px; margin: 8px 0 14px;
     display: grid; place-items: center;
     border-radius: var(--radius-full);
     background: var(--glass-overlay);
@@ -133,10 +142,10 @@
 
   .name { margin: 0; font-weight: 400; }
   .essence { margin: 6px 0 12px; }
-  .rule { width: 24px; height: 1px; opacity: 0.6; margin: 16px 0 12px; }
+  .rule { width: 24px; height: 1px; opacity: 0.6; margin: 12px 0 10px; }
   .suggestion { margin: 0; max-width: 30ch; }
 
-  .actions { display: flex; gap: 26px; margin-top: 24px; }
+  .actions { display: flex; gap: 26px; margin-top: 18px; }
   .act {
     display: flex; flex-direction: column; align-items: center; gap: 7px;
     background: none; border: none; padding: 0; cursor: pointer;

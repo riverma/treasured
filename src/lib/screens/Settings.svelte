@@ -7,6 +7,12 @@
   import { router } from '$lib/store/router.svelte';
 
   let confirmingReset = $state(false);
+  let checkState = $state<'idle' | 'checking' | 'ready' | 'current' | 'unsupported'>('idle');
+
+  async function check(): Promise<void> {
+    checkState = 'checking';
+    checkState = await app.checkForUpdate();
+  }
 
   function save(): void {
     const text = buildBackup($state.snapshot(data.slice), __APP_VERSION__);
@@ -84,6 +90,26 @@
           oninput={(e) => data.setCountryCode((e.currentTarget as HTMLInputElement).value)}
         />
       </label>
+    </div>
+
+    <span class="ah-micro-caps lbl">Version</span>
+    <div class="card list group">
+      <button class="btn ghost wide" onclick={check} disabled={checkState === 'checking'}>
+        {checkState === 'checking' ? 'Looking…' : 'Check for a new version'}
+      </button>
+      {#if checkState === 'ready' || app.updateReady}
+        <button class="btn wide" onclick={() => app.applyUpdate()} disabled={app.updating}>
+          {app.updating ? 'Updating…' : 'Update now'}
+        </button>
+      {:else if checkState === 'current'}
+        <!-- Being already current is an answer, and worth saying out loud. -->
+        <span class="ah-caption soft">You have the newest one.</span>
+      {:else if checkState === 'unsupported'}
+        <span class="ah-caption soft">
+          Updates arrive on their own here. Add Treasured to your Home Screen and it can
+          check on purpose.
+        </span>
+      {/if}
     </div>
 
     <span class="ah-micro-caps lbl">This app</span>

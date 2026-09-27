@@ -11,8 +11,17 @@
   import Connections from '$lib/screens/Connections.svelte';
   import Deck from '$lib/screens/Deck.svelte';
   import Today from '$lib/screens/Today.svelte';
-  import Dots from '$lib/ui/Dots.svelte';
+  import PaneRail from '$lib/ui/PaneRail.svelte';
   import { PANES, router } from '$lib/store/router.svelte';
+
+  /** What the rail calls each pane. 'This week' reads better than 'Connections' at this size. */
+  const LABELS = ['Deck', 'Today', 'This week'] as const;
+  const IDS = ['pane-deck', 'pane-today', 'pane-connections'] as const;
+
+  function pick(i: number): void {
+    const name = PANES[i];
+    if (name) router.root('/' + name);
+  }
 
   let surface = $state<HTMLElement | null>(null);
   let index = $state(PANES.indexOf('today'));
@@ -57,34 +66,45 @@
   }
 </script>
 
+<!--
+  All three panes are always in the DOM. Without `inert` on the two you are not looking at,
+  Tab walks straight into offscreen controls: from Today, one Tab landed on the Deck's Next
+  button and six landed on a Connections card, at which point the browser scrolled focus
+  into view and the screen changed under you. Screen readers got all three panes' controls
+  as one undifferentiated run. `inert` takes them out of the tab order, out of hit-testing
+  and out of the accessibility tree in one attribute.
+-->
 <div class="panes" bind:this={surface} {onscroll}>
-  <section class="pane" aria-label="Deck"><Deck /></section>
-  <section class="pane" aria-label="Today"><Today /></section>
-  <section class="pane" aria-label="Connections"><Connections /></section>
+  <div class="pane" id={IDS[0]} role="tabpanel" aria-label="Deck" inert={index !== 0}><Deck /></div>
+  <div class="pane" id={IDS[1]} role="tabpanel" aria-label="Today" inert={index !== 1}><Today /></div>
+  <div class="pane" id={IDS[2]} role="tabpanel" aria-label="This week" inert={index !== 2}><Connections /></div>
 </div>
 
 <div class="rail">
+  <PaneRail labels={LABELS} ids={IDS} {index} onpick={pick} />
   <button class="cog ah-micro-caps" onclick={() => router.go('/settings')}>Settings</button>
-  <Dots count={PANES.length} {index} labels={PANES} />
-  <span class="spacer"></span>
 </div>
 
 <style>
   /* The dots sit in their own strip at the bottom; the panes take everything above it. */
   .rail {
     position: absolute; left: 0; right: 0; bottom: 0;
-    display: flex; align-items: center; justify-content: space-between;
-    padding-left: var(--gutter); padding-right: var(--gutter);
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px;
+    padding: 0 var(--gutter);
   }
-  .cog, .spacer { flex: 1 1 0; min-width: 0; }
+  /* Settings sits apart from the three panes, because it is not one of them. */
   .cog {
-    background: none; border: none; cursor: pointer; text-align: left;
-    color: var(--text-faint); padding: 6px 0 calc(var(--safe-bottom) + 10px);
+    flex-shrink: 0;
+    background: none; border: none; cursor: pointer;
+    color: var(--text-faint);
+    padding: 12px 6px calc(var(--safe-bottom) + 10px);
   }
 
   .panes {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 38px;
+    /* the rail carries words now, not three dots, so it is taller than it was */
+    top: 0; left: 0; right: 0; bottom: 62px;
     display: flex;
     overflow-x: auto;
     overflow-y: hidden;

@@ -14,7 +14,8 @@
 
   const RELATIONS: RelationKey[] = ['friend', 'family', 'romantic', 'professional'];
 
-  let step = $state(0);
+  // `#/onboarding/person` means "someone sent me here to add a person" — skip the welcome.
+  let step = $state(router.route.id === 'person' ? 1 : 0);
   let fullName = $state('');
   let essence = $state('');
   let relations = $state<RelationKey[]>(['friend']);

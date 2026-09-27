@@ -13,6 +13,7 @@ const OURS = /^(index\.html|sw\.js|manifest\.webmanifest|icons\/|assets\/[^/]+\.
 // when it is installed and the vendor's own page when it is not, so there is never a dead end.
 const ALLOWED_LINKS = [
   'https://treasured.riverma.com',
+  'https://riverma.com',
   'https://www.gnu.org/licenses/agpl-3.0.html',
   'https://github.com/riverma/treasured',
   'http://www.w3.org/2000/svg',

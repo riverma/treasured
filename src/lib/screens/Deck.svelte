@@ -32,20 +32,39 @@
 
   // Drag state. Deliberately not a velocity model: any deliberate drag past the threshold
   // moves one card, and a flick moves one card too.
+  //
+  // Capture is taken lazily, and this matters more than it looks. Capturing on pointerdown
+  // retargets the subsequent pointerup *and the synthesised click* to the stage, so a card's
+  // own onclick never fires — which on a mouse made the deck a gallery you could not open
+  // anyone from. Touch got away with it because the click target is computed differently
+  // there. So: capture only once the pointer has moved far enough to be unambiguously a
+  // drag, which is also exactly when suppressing the click is what you want.
+  const DRAG_START = 10;
+  const DRAG_COMMIT = 40;
+
   let startX = 0;
   let dragging = false;
+  let captured = false;
 
   function down(e: PointerEvent): void {
     dragging = true;
+    captured = false;
     startX = e.clientX;
+  }
+
+  function move(e: PointerEvent): void {
+    if (!dragging || captured) return;
+    if (Math.abs(e.clientX - startX) <= DRAG_START) return;
+    captured = true;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
 
   function up(e: PointerEvent): void {
     if (!dragging) return;
     dragging = false;
+    captured = false;
     const dx = e.clientX - startX;
-    if (Math.abs(dx) < 40) return;
+    if (Math.abs(dx) < DRAG_COMMIT) return;
     step(dx < 0 ? 1 : -1);
   }
 </script>
@@ -56,6 +75,7 @@
       <span class="ah-micro-caps faint">Deck</span>
       <h2 class="ah-heading-m head">Your people</h2>
     </div>
+    <button class="pill" onclick={() => router.go('/onboarding/person')}>Add</button>
     <button class="pill" onclick={() => (rings = true)}>
       <span class="dot" style="background: {data.activeRing?.color ?? 'var(--amber-600)'}"></span>
       {data.activeRing?.name ?? 'Everyone'}
@@ -71,13 +91,17 @@
           ? "Nobody here yet. Add someone whenever you're ready."
           : 'This ring is empty. Everyone you have is still in the others.'}
       </p>
+      {#if data.slice.people.length === 0}
+        <button class="btn" onclick={() => router.go('/onboarding/person')}>Add someone</button>
+      {/if}
     </div>
   {:else}
     <div
       class="stage"
       onpointerdown={down}
+      onpointermove={move}
       onpointerup={up}
-      onpointercancel={() => (dragging = false)}
+      onpointercancel={() => { dragging = false; captured = false; }}
       role="group"
       aria-label="Deck of people"
     >
@@ -91,14 +115,16 @@
     </div>
 
     <div class="below">
-      <button class="nav ah-small-caps" onclick={() => step(-1)} disabled={index === 0}>Back</button>
+      <button class="nav ah-small-caps" onclick={() => step(-1)} disabled={index === 0}>Previous</button>
       <span class="ah-micro-caps faint count">{index + 1} of {people.length}</span>
       <button class="nav ah-small-caps" onclick={() => step(1)} disabled={index >= people.length - 1}>Next</button>
     </div>
 
     {#if active}
       <p class="ah-caption soft hint">
-        {app.reduceMotion ? 'Use Back and Next to move through the deck.' : 'Drag to move one card.'}
+        {app.reduceMotion
+          ? 'Use Previous and Next to move through the deck.'
+          : 'Drag to move one card. Swipe the screen sideways for Today.'}
       </p>
     {/if}
   {/if}

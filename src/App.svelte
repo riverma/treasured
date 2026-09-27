@@ -18,6 +18,7 @@
   import Settings from '$lib/screens/Settings.svelte';
   import Toast from '$lib/ui/Toast.svelte';
   import UpdateBar from '$lib/ui/UpdateBar.svelte';
+  import { app } from '$lib/store/app.svelte';
   import { data } from '$lib/store/data.svelte';
   import { router } from '$lib/store/router.svelte';
 
@@ -33,6 +34,14 @@
       router.installRequested = false;
       router.go('/install');
     }
+  });
+
+  // The update bar is pinned to the top of the frame, so every screen underneath has to
+  // move down while it is there — otherwise it covers the Back button.
+  $effect(() => {
+    const el = document.getElementById('app');
+    if (!el) return;
+    el.classList.toggle('with-update', app.updateReady && !app.updateDismissed);
   });
 
   const screen = $derived(router.route.screen);
